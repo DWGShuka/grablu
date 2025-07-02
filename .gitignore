@@ -1,0 +1,12 @@
+# Pythonのキャッシュファイル
+__pycache__/
+*.pyc
+
+# 仮想環境
+.venv/
+
+# VS Code設定（開発者によるが）
+.vscode/
+
+# 機密ファイル
+credentials.json
