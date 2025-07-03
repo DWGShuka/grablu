@@ -1,0 +1,9 @@
+spreadsheet:
+  url: "https://docs.google.com/spreadsheets/d/1us7qZ_3LUVd5xgyafhDY6ePi9EVAAz2VWEvnZ6gva2A/edit"
+  sheet_name: "団員管理"
+
+guild:
+  name: "しゃる鯖"
+
+site:
+  base_url: "https://gbfdata.com/ja"
