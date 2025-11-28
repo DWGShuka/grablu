@@ -27,38 +27,36 @@ def load_config(path="config.yaml"):
     with open(path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
-def write_to_spreadsheet(data, spreadsheet_url, sheet_name="Sheet1", event_number=None):
+def write_to_spreadsheet(data, spreadsheet_url, sheet_name="団員管理", event_number=None):
 
-    # 認証処理
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    # スプレッドシート認証
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     client = gspread.authorize(creds)
+
+    # シート取得
     sheet = client.open_by_url(spreadsheet_url).worksheet(sheet_name)
 
-    # 全データ取得
-    all_values = sheet.get_all_values()
-    if not all_values:
-        raise ValueError("シートが空です")
+    # 名前一覧（B列）を取得（1行目はヘッダー）
+    name_cells = sheet.col_values(2)
+    name_list = [name.strip() for name in name_cells[1:]]  # indexは2行目から
 
-    header = all_values[0]
-    name_list = [row[1] for row in all_values[1:] if len(row) > 1]  # B列（名前）
+    # 新しい順位列の挿入（C列に挿入 → 既存列が右にずれる）
+    new_col_title = f"第{event_number}回"
+    sheet.insert_cols([[new_col_title] + [""] * len(name_list)], col=3)
 
-    # イベントタイトル（列のタイトル）
-    new_col_title = f"第{event_number}回" if event_number else "新規"
-
-    # C列に新しい列を挿入（順位列の先頭）
-    sheet.insert_cols([[new_col_title]], col=3)
-
-    # 書き込み処理
+    # データの書き込み
     for name, rank in data:
-        try:
-            row_index = name_list.index(name) + 2  # ヘッダ+1行目から開始
-        except ValueError:
-            # 新規追加（A: 空, B: 名前, C: 順位）
-            sheet.append_row(["", name, rank])
-        else:
-            # 既存行 → C列に順位追加
+        name = name.strip()
+        if name in name_list:
+            row_index = name_list.index(name) + 2  # 1ベース + ヘッダー
             sheet.update_cell(row_index, 3, rank)
+        else:
+            # 新規団員の行を末尾に追加
+            new_row_index = len(name_list) + 2
+            sheet.update_cell(new_row_index, 2, name)  # 名前（B列）
+            sheet.update_cell(new_row_index, 3, rank)  # 新しい順位（C列）
+            name_list.append(name)
 
 # -------------------------------
 # 共通ユーティリティ
