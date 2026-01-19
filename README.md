@@ -55,13 +55,30 @@ site:
 
 ## 実行方法
 
+### 団員管理
+
 ```powershell
-python main.py
+python member_main.py
 ```
+
+または `団員管理.bat` をダブルクリック
+
+### ドロップ統計
+
+```powershell
+python drop_main.py
+```
+
+または `ドロップ統計.bat` をダブルクリック
 
 ## ログ
 
-実行ログは `grablu.log` に出力されます。
+実行ログは以下に出力されます：
+- 団員管理: `member.log`
+- ドロップ統計: `drop.log`
+
+グラフ画像：
+- `drop_distribution.png` （ドロップ統計実行時に生成）
 
 ## 注意事項
 
