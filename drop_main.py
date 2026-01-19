@@ -40,12 +40,12 @@ def _initialize():
     if not drop_config:
         raise ValueError("config.yamlに'drop_stats'セクションが見つかりません")
     
-    url = drop_config.get("url")
+    url = drop_config.get("drop_record_url")
     blue_chest_prob = drop_config.get("blue_chest_probability")
     hihi_prob = drop_config.get("hihi_probability")
     
     if not all([url, blue_chest_prob, hihi_prob]):
-        raise ValueError("設定が不完全です。url, blue_chest_probability, hihi_probabilityを確認してください")
+        raise ValueError("設定が不完全です。drop_record_url, blue_chest_probability, hihi_probabilityを確認してください")
     
     logger.info("設定ファイルを読み込みました")
     return config, drop_config
@@ -66,7 +66,7 @@ def _scrape_and_analyze(driver, drop_config):
     # config.yaml からログイン情報を取得
     login_username = drop_config.get("login", {}).get("username")
     login_password = drop_config.get("login", {}).get("password")
-    url = drop_config.get("url")
+    url = drop_config.get("drop_record_url")
     blue_chest_prob = drop_config.get("blue_chest_probability")
     hihi_prob = drop_config.get("hihi_probability")
     

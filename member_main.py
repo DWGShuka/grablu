@@ -29,10 +29,10 @@ def main():
     try:
         # 設定読み込み
         config = load_config()
-        spreadsheet_url = config["spreadsheet"]["url"]
+        spreadsheet_url = config["spreadsheet"]["sheet_url"]
         sheet_name = config["spreadsheet"]["sheet_name"]
         guild_name = config["guild"]["name"]
-        base_url = config["site"]["base_url"]
+        base_url = config["member_stats"]["guild_database_url"]
 
         # Chromeドライバー起動（Selenium Managerが自動で最新版を管理）
         driver = webdriver.Chrome()
