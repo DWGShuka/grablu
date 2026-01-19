@@ -10,3 +10,4 @@ __pycache__/
 
 # 機密ファイル
 credentials.json
+config.yaml
