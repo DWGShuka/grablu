@@ -16,6 +16,4 @@ config.yaml
 *.log
 
 # 生成ファイル
-drop_distribution.png
 graphs/
-output/

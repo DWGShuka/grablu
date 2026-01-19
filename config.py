@@ -62,7 +62,7 @@ class OutputConfig:
     
     @staticmethod
     def get_output_path(directory, prefix="output", extension="png"):
-        """完全な出力ファイルパスを取得
+        """完全な出力ファイルパスを取得。同名ファイル存在時は連番を付与
         
         Args:
             directory: 出力ディレクトリ
@@ -70,8 +70,21 @@ class OutputConfig:
             extension: ファイル拡張子
         
         Returns:
-            完全なファイルパス
+            完全なファイルパス (同名ファイル存在時は連番付き)
         """
-        OutputConfig.ensure_directory(directory)
         filename = OutputConfig.generate_filename(prefix, extension)
-        return os.path.join(directory, filename)
+        filepath = os.path.join(directory, filename)
+        
+        # 同名ファイルが存在する場合、連番を付与
+        if os.path.exists(filepath):
+            name_without_ext = os.path.splitext(filename)[0]
+            counter = 1
+            while True:
+                numbered_filename = f"{name_without_ext}_{counter:02d}.{extension}"
+                filepath = os.path.join(directory, numbered_filename)
+                if not os.path.exists(filepath):
+                    logger.info(f"同名ファイルが存在するため連番を付与します: {numbered_filename}")
+                    break
+                counter += 1
+        
+        return filepath
