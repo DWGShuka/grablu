@@ -47,18 +47,21 @@ pip install -r requirements.txt
 
 ```yaml
 spreadsheet:
-  url: "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID"
+  sheet_url: "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID"
   sheet_name: "団員管理"
 
 guild:
   name: "あなたの団名"
 
-site:
-  base_url: "https://example.com"
+# 団員管理設定
+member_stats:
+  # グラブル攻略データベースのURL（団員スクレイピング時に使用）
+  guild_database_url: "https://gbfdata.com/ja"
 
 # ドロップ統計設定
 drop_stats:
-  url: "https://gbfdrop.jp/record"
+  # gbfdrop.jpのドロップ記録ページURL（スクレイピング対象）
+  drop_record_url: "https://gbfdrop.jp/record"
   
   # ログイン情報
   login:
@@ -67,10 +70,10 @@ drop_stats:
   
   # ドロップ確率設定
   blue_chest_probability: 0.1            # つよバハ青箱ドロップ確率
-  hihi_probability: 0.02                  # 青箱からのヒヒイロカネドロップ確率
+  hihi_probability: 0.02                  # 青箱からのヒヒイロカネドロップ確率（条件付き確率）
   
   # 出力設定
-  output_directory: "./output"           # グラフの保存先ディレクトリ
+  output_directory: "./graphs"           # グラフの保存先ディレクトリ
 ```
 
 ### 4. Google認証情報の設定（団員管理機能を使用する場合）
