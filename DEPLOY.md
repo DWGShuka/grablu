@@ -1,257 +1,458 @@
-# Grablu Web Application - AWS EC2 デプロイ手順書
+# Grablu Web Application - GCP Cloud Run デプロイ手順書
 
 ## 概要
-Grablu 団員管理システムをAWS EC2上にデプロイする手順です。
+Grablu 団員管理システムをGCP Cloud Runにデプロイする手順です。Cloud Runはサーバーレスでコンテナを実行でき、無料枠が充実しています。
+
+## 料金について
+**無料枠（毎月）:**
+- リクエスト: 200万回
+- CPU時間: 360,000 vCPU秒
+- メモリ: 180,000 GiB秒
+- Cloud SQL（PostgreSQL）: 小規模インスタンス無料枠あり
+
+**推定コスト:**
+- 小規模利用: 無料枠内で収まる
+- 中規模利用: 月数百円程度
+
+---
 
 ## 前提条件
-- AWSアカウントを持っていること
-- 基本的なコマンドライン操作ができること
+- Googleアカウント
+- クレジットカード（無料枠内でも登録必須）
+- gcloud CLI（インストール手順は後述）
 
 ---
 
-## 1. EC2インスタンスの作成
+## 1. GCPプロジェクトのセットアップ
 
-### 1.1 AWSマネジメントコンソールにログイン
-https://console.aws.amazon.com/
+### 1.1 GCPコンソールにアクセス
+https://console.cloud.google.com/
 
-### 1.2 EC2インスタンスを起動
-1. EC2ダッシュボードから「インスタンスを起動」をクリック
-2. 以下の設定を選択:
+### 1.2 新しいプロジェクトを作成
+1. プロジェクトセレクタから「新しいプロジェクト」をクリック
+2. プロジェクト名: `grablu-app`
+3. 組織: なし（個人利用の場合）
+4. 「作成」をクリック
 
-**基本設定:**
-- 名前: `grablu-web-app`
-- AMI: `Ubuntu Server 22.04 LTS (HVM), SSD Volume Type`
-- インスタンスタイプ: `t2.micro`（無料枠対象）
+### 1.3 請求先アカウントの設定
+1. 左メニュー → 「お支払い」
+2. 新しい請求先アカウントを作成
+3. クレジットカード情報を入力
+   - **注意**: 無料枠内なら課金されません
 
-**キーペア:**
-- 新しいキーペアを作成 or 既存のものを選択
-- 名前: `grablu-key`
-- ファイル形式: `.pem`（Mac/Linux） or `.ppk`（Windows）
-- **重要: ダウンロードしたキーは安全な場所に保存**
+### 1.4 必要なAPIを有効化
+以下のAPIを有効にします：
 
-**ネットワーク設定:**
-- VPC: デフォルトVPC
-- パブリックIPの自動割り当て: 有効化
-- セキュリティグループ:
-  - SSH（ポート22）: マイIP
-  - HTTP（ポート80）: どこからでも (0.0.0.0/0)
-  - カスタムTCP（ポート8000）: どこからでも (0.0.0.0/0)
+```bash
+# Cloud Run API
+# Cloud SQL Admin API
+# Artifact Registry API
+# Cloud Build API
+```
 
-**ストレージ:**
-- 8 GiB gp3（無料枠）
-
-### 1.3 インスタンス起動
-「インスタンスを起動」をクリック
+GCPコンソールで「APIとサービス」→「ライブラリ」から検索して有効化
 
 ---
 
-## 2. EC2への接続
+## 2. gcloud CLIのセットアップ
 
-### 2.1 パブリックIPアドレスを確認
-EC2ダッシュボードでインスタンスの「パブリックIPv4アドレス」をメモ
+### 2.1 gcloud CLIのインストール
 
-### 2.2 SSHで接続
-```bash
-# キーの権限を変更（初回のみ）
-chmod 400 grablu-key.pem
+**Windows:**
+```powershell
+# インストーラをダウンロード
+# https://cloud.google.com/sdk/docs/install
 
-# EC2に接続
-ssh -i grablu-key.pem ubuntu@<パブリックIPアドレス>
+# または Chocolateyを使用
+choco install gcloudsdk
 ```
 
----
-
-## 3. サーバーのセットアップ
-
-### 3.1 システムパッケージの更新
+**Mac:**
 ```bash
-sudo apt update
-sudo apt upgrade -y
+brew install --cask google-cloud-sdk
 ```
 
-### 3.2 Dockerのインストール
+**Linux:**
 ```bash
-# 必要なパッケージをインストール
-sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-
-# DockerのGPGキーを追加
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
-# Dockerリポジトリを追加
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-# Dockerをインストール
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
-
-# Dockerを起動
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# 現在のユーザーをdockerグループに追加
-sudo usermod -aG docker ubuntu
-
-# 再ログインして反映（一旦exitして再接続）
-exit
-ssh -i grablu-key.pem ubuntu@<パブリックIPアドレス>
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
 ```
 
-### 3.3 Gitのインストール
+### 2.2 gcloud認証
 ```bash
-sudo apt install -y git
+# Googleアカウントで認証
+gcloud auth login
+
+# プロジェクトを設定
+gcloud config set project grablu-app
+
+# デフォルトリージョンを設定
+gcloud config set run/region asia-northeast1  # 東京リージョン
 ```
 
 ---
 
-## 4. アプリケーションのデプロイ
+## 3. Cloud SQLのセットアップ
 
-### 4.1 リポジトリのクローン
-```bash
-cd ~
-git clone <あなたのGitリポジトリURL> grablu
-cd grablu
-```
-
-### 4.2 設定ファイルの配置
-ローカルからEC2に設定ファイルを転送:
+### 3.1 PostgreSQLインスタンスを作成
 
 ```bash
-# ローカル側で実行（別のターミナル）
-scp -i grablu-key.pem config.yaml ubuntu@<パブリックIPアドレス>:~/grablu/
-scp -i grablu-key.pem credentials.json ubuntu@<パブリックIPアドレス>:~/grablu/
+# Cloud SQLインスタンスを作成（小規模無料枠）
+gcloud sql instances create grablu-db \
+  --database-version=POSTGRES_16 \
+  --tier=db-f1-micro \
+  --region=asia-northeast1 \
+  --root-password=YOUR_STRONG_PASSWORD \
+  --storage-size=10GB \
+  --storage-type=HDD
+
+# データベースを作成
+gcloud sql databases create grablu --instance=grablu-db
+
+# ユーザーを作成
+gcloud sql users create grablu \
+  --instance=grablu-db \
+  --password=YOUR_DB_PASSWORD
 ```
 
-### 4.3 認証情報の設定
-EC2上で環境変数ファイルを作成:
+**注意**: `YOUR_STRONG_PASSWORD`と`YOUR_DB_PASSWORD`は強力なパスワードに置き換えてください。
+
+### 3.2 Cloud SQL Proxyの設定（オプション、ローカルテスト用）
 
 ```bash
-cd ~/grablu
-nano .env
+# Cloud SQL Proxyをダウンロード
+# Windows
+curl -o cloud-sql-proxy.exe https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.x64.exe
+
+# Mac/Linux
+curl -o cloud-sql-proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64
+chmod +x cloud-sql-proxy
+
+# 接続
+./cloud-sql-proxy grablu-app:asia-northeast1:grablu-db
 ```
 
-以下を記入:
+---
+
+## 4. Artifact Registryのセットアップ
+
+### 4.1 Dockerリポジトリを作成
+
+```bash
+# リポジトリ作成
+gcloud artifacts repositories create grablu-repo \
+  --repository-format=docker \
+  --location=asia-northeast1 \
+  --description="Grablu application repository"
+
+# Docker認証を設定
+gcloud auth configure-docker asia-northeast1-docker.pkg.dev
 ```
+
+---
+
+## 5. アプリケーションのビルドとプッシュ
+
+### 5.1 本番用Dockerfileの準備
+
+プロジェクトルートの`Dockerfile`を確認（既に存在します）
+
+### 5.2 環境変数ファイルの準備
+
+`.env.production`を作成（**Gitにコミットしない**）:
+
+```env
+DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db
 USERNAME=admin
-PASSWORD=<強力なパスワード>
+PASSWORD=your_admin_password
 ```
 
-保存: `Ctrl + O` → Enter → `Ctrl + X`
+### 5.3 Dockerイメージのビルドとプッシュ
 
-### 4.4 Dockerイメージのビルド
 ```bash
-docker build -t grablu-web .
-```
+# イメージをビルド
+docker build -t asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest .
 
-### 4.5 コンテナの起動
-```bash
-docker run -d \
-  --name grablu-app \
-  -p 8000:8000 \
-  -v ~/grablu/members.json:/app/members.json \
-  -v ~/grablu/config.yaml:/app/config.yaml \
-  -v ~/grablu/credentials.json:/app/credentials.json \
-  --env-file .env \
-  --restart unless-stopped \
-  grablu-web
+# プッシュ
+docker push asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest
 ```
 
 ---
 
-## 5. 動作確認
+## 6. Cloud Runへのデプロイ
 
-### 5.1 ログの確認
+### 6.1 Cloud Runサービスをデプロイ
+
 ```bash
-docker logs grablu-app
+gcloud run deploy grablu-web \
+  --image=asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest \
+  --platform=managed \
+  --region=asia-northeast1 \
+  --allow-unauthenticated \
+  --add-cloudsql-instances=grablu-app:asia-northeast1:grablu-db \
+  --set-env-vars="DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db" \
+  --set-env-vars="USERNAME=admin" \
+  --set-env-vars="PASSWORD=your_admin_password" \
+  --memory=512Mi \
+  --cpu=1 \
+  --max-instances=10 \
+  --min-instances=0
 ```
 
-### 5.2 Webブラウザでアクセス
+### 6.2 デプロイ完了
+
+デプロイが完了すると、URLが表示されます：
 ```
-http://<パブリックIPアドレス>:8000
+Service URL: https://grablu-web-xxxxxxxxxx-an.a.run.app
 ```
 
-- ユーザー名: `admin`
-- パスワード: 設定したパスワード
+このURLにアクセスしてアプリケーションを確認してください。
 
 ---
 
-## 6. 運用コマンド
+## 7. CI/CDの設定（オプション）
 
-### アプリケーションの再起動
-```bash
-docker restart grablu-app
+### 7.1 Cloud Buildを使った自動デプロイ
+
+`cloudbuild.yaml`を作成:
+
+```yaml
+steps:
+  # Dockerイメージをビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA', '.']
+  
+  # Artifact Registryにプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA']
+  
+  # Cloud Runにデプロイ
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'grablu-web'
+      - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA'
+      - '--region=asia-northeast1'
+      - '--platform=managed'
+
+images:
+  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA'
 ```
 
-### アプリケーションの停止
+### 7.2 GitHub連携
+
 ```bash
-docker stop grablu-app
-```
-
-### アプリケーションの更新
-```bash
-cd ~/grablu
-git pull
-docker stop grablu-app
-docker rm grablu-app
-docker build -t grablu-web .
-docker run -d --name grablu-app -p 8000:8000 -v ~/grablu/members.json:/app/members.json -v ~/grablu/config.yaml:/app/config.yaml -v ~/grablu/credentials.json:/app/credentials.json --env-file .env --restart unless-stopped grablu-web
-```
-
-### ログの確認
-```bash
-docker logs -f grablu-app
-```
-
-### members.jsonのバックアップ
-```bash
-cp ~/grablu/members.json ~/grablu/members.json.backup.$(date +%Y%m%d)
-```
-
----
-
-## 7. セキュリティ強化（推奨）
-
-### 7.1 ファイアウォールの設定
-```bash
-sudo ufw allow 22/tcp
-sudo ufw allow 8000/tcp
-sudo ufw enable
-```
-
-### 7.2 自動アップデートの有効化
-```bash
-sudo apt install -y unattended-upgrades
-sudo dpkg-reconfigure -plow unattended-upgrades
+# Cloud Buildトリガーを作成
+gcloud builds triggers create github \
+  --repo-name=grablu \
+  --repo-owner=YOUR_GITHUB_USERNAME \
+  --branch-pattern="^main$" \
+  --build-config=cloudbuild.yaml
 ```
 
 ---
 
-## 8. コスト見積もり
+## 8. データベース初期化
 
-### 無料枠利用時（初年度）
-- EC2 t2.micro: **無料**（月750時間まで）
-- データ転送: ほぼ無料（利用頻度が低いため）
+### 8.1 初回デプロイ後のデータベース確認
 
-### 無料枠終了後
-- EC2 t2.micro: 約 **$8-10/月**
-- データ転送: 約 **$1/月**
-- **合計: 約 $10/月**
+デプロイ後、初めてアプリケーションにアクセスすると自動的にテーブルが作成されます。
 
----
-
-## トラブルシューティング
-
-### 接続できない場合
-1. セキュリティグループでポート8000が開いているか確認
-2. `docker logs grablu-app` でエラーを確認
-3. `docker ps -a` でコンテナが起動しているか確認
-
-### Chromeが起動しない場合
+ログを確認:
 ```bash
-docker exec -it grablu-app google-chrome --version
+gcloud run services logs read grablu-web --limit=50
 ```
-でChromeがインストールされているか確認
+
+### 8.2 手動でのテーブル確認（オプション）
+
+```bash
+# Cloud SQLに接続
+gcloud sql connect grablu-db --user=grablu --quiet
+
+# PostgreSQL内で確認
+\c grablu
+\dt
+```
 
 ---
 
-## お問い合わせ
-問題が発生した場合は、ログファイル（`docker logs grablu-app`）を確認してください。
+## 9. 運用と監視
+
+### 9.1 ログの確認
+
+```bash
+# リアルタイムログ
+gcloud run services logs tail grablu-web
+
+# 最新50件
+gcloud run services logs read grablu-web --limit=50
+```
+
+### 9.2 メトリクスの確認
+
+GCPコンソール → Cloud Run → grablu-web → 「メトリクス」タブ
+
+以下を確認できます：
+- リクエスト数
+- レスポンスタイム
+- エラー率
+- CPU/メモリ使用率
+
+### 9.3 アラート設定
+
+1. GCPコンソール → Monitoring → Alerting
+2. 「ポリシーを作成」をクリック
+3. 条件を設定:
+   - エラー率が5%を超えたら
+   - レスポンスタイムが3秒を超えたら
+4. 通知先を設定（メール、Slack等）
+
+---
+
+## 10. コスト最適化
+
+### 10.1 無料枠の確認
+
+GCPコンソール → お支払い → 「レポート」
+
+### 10.2 コスト削減のヒント
+
+1. **最小インスタンス数を0に設定**
+   ```bash
+   --min-instances=0
+   ```
+   アクセスがない時は完全に停止
+
+2. **リソース制限**
+   ```bash
+   --memory=512Mi  # 必要最小限
+   --cpu=1         # 1コアで十分
+   ```
+
+3. **Cloud SQLを停止**（開発中）
+   ```bash
+   gcloud sql instances patch grablu-db --activation-policy=NEVER
+   ```
+   使用時のみ起動:
+   ```bash
+   gcloud sql instances patch grablu-db --activation-policy=ALWAYS
+   ```
+
+---
+
+## 11. トラブルシューティング
+
+### 11.1 デプロイが失敗する
+
+```bash
+# ログを確認
+gcloud run services logs read grablu-web --limit=100
+
+# サービスの状態を確認
+gcloud run services describe grablu-web --region=asia-northeast1
+```
+
+### 11.2 データベース接続エラー
+
+```bash
+# Cloud SQLインスタンスの状態確認
+gcloud sql instances describe grablu-db
+
+# 接続文字列の確認
+gcloud sql instances describe grablu-db --format="value(connectionName)"
+```
+
+正しい形式: `grablu-app:asia-northeast1:grablu-db`
+
+### 11.3 アプリケーションが起動しない
+
+1. ローカルでDockerイメージをテスト:
+   ```bash
+   docker run -p 8000:8000 \
+     -e DATABASE_URL="postgresql://..." \
+     asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest
+   ```
+
+2. ログを確認:
+   ```bash
+   gcloud run services logs tail grablu-web
+   ```
+
+---
+
+## 12. カスタムドメインの設定（オプション）
+
+### 12.1 ドメインのマッピング
+
+```bash
+# ドメインを追加
+gcloud run domain-mappings create \
+  --service=grablu-web \
+  --domain=grablu.yourdomain.com \
+  --region=asia-northeast1
+```
+
+### 12.2 DNSレコードの設定
+
+Cloud Runが表示するDNSレコードを、ドメインレジストラで設定してください。
+
+---
+
+## 13. セキュリティ強化
+
+### 13.1 認証の追加
+
+Cloud Run IAMで特定のユーザーのみアクセス可能に:
+
+```bash
+# 認証を必須に変更
+gcloud run services update grablu-web \
+  --region=asia-northeast1 \
+  --no-allow-unauthenticated
+
+# 特定のユーザーに権限付与
+gcloud run services add-iam-policy-binding grablu-web \
+  --region=asia-northeast1 \
+  --member="user:someone@example.com" \
+  --role="roles/run.invoker"
+```
+
+### 13.2 Secret Managerの使用
+
+機密情報をSecret Managerに保存:
+
+```bash
+# シークレット作成
+echo -n "your_db_password" | gcloud secrets create db-password --data-file=-
+
+# Cloud Runでシークレットを使用
+gcloud run services update grablu-web \
+  --region=asia-northeast1 \
+  --update-secrets=DB_PASSWORD=db-password:latest
+```
+
+---
+
+## まとめ
+
+GCP Cloud Runを使ったデプロイの流れ：
+
+1. ✅ GCPプロジェクト作成
+2. ✅ Cloud SQL（PostgreSQL）セットアップ
+3. ✅ Artifact RegistryでDockerリポジトリ作成
+4. ✅ Dockerイメージをビルド＆プッシュ
+5. ✅ Cloud Runにデプロイ
+6. ✅ 自動スケーリングと監視
+
+**メリット:**
+- サーバー管理不要
+- 自動スケーリング
+- 使った分だけ課金
+- 無料枠が充実
+
+**参考リンク:**
+- [Cloud Run公式ドキュメント](https://cloud.google.com/run/docs)
+- [Cloud SQL公式ドキュメント](https://cloud.google.com/sql/docs)
+- [料金計算ツール](https://cloud.google.com/products/calculator)

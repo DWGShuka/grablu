@@ -5,7 +5,10 @@
 Webスクレイピングでグラブルの団員データを取得し、Google Sheetsに自動記録するツールです。  
 さらに、ドロップ確率を統計分析し、期待値とパーセンタイル評価を行う機能を搭載しています。
 
-**🎉 Webアプリケーション版が利用可能です！** - 詳細は[LOCAL_DEV.md](LOCAL_DEV.md)と[DEPLOY.md](DEPLOY.md)を参照してください。
+**🎉 Webアプリケーション版が利用可能です！**
+
+- **ローカル開発**: [LOCAL_DEV.md](LOCAL_DEV.md)
+- **GCPデプロイ**: [DEPLOY.md](DEPLOY.md) - Cloud Run（無料枠充実）
 
 ## 開発に参加する
 

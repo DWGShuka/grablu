@@ -1,0 +1,38 @@
+steps:
+  # Dockerイメージをビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA', '.']
+  
+  # 最新タグも付ける
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['tag', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:latest']
+  
+  # Artifact Registryにプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA']
+  
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:latest']
+  
+  # Cloud Runにデプロイ
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'grablu-web'
+      - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA'
+      - '--region=asia-northeast1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--max-instances=10'
+      - '--min-instances=0'
+
+images:
+  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:$COMMIT_SHA'
+  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/web:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
