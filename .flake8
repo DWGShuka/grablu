@@ -1,0 +1,28 @@
+[flake8]
+exclude = 
+    .venv,
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    .pytest_cache,
+    .mypy_cache,
+    venv,
+    env
+
+max-line-length = 127
+max-complexity = 10
+
+# Ignore some common warnings
+ignore = 
+    # line too long (handled by max-line-length)
+    E501,
+    # whitespace before ':'
+    E203,
+    # line break before binary operator
+    W503
+
+per-file-ignores =
+    # Ignore unused imports in __init__.py files
+    __init__.py:F401
