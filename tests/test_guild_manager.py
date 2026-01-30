@@ -7,15 +7,19 @@ from models import Guild
 class TestGuildManager:
     """GuildManagerクラスのテストクラス"""
     
-    def test_register_guild(self, db_session):
+    def test_add_guild(self, db_session):
         """団の登録をテスト"""
         manager = GuildManager(db_session)
         
-        guild = manager.register_guild("test_001", "テスト団A")
+        result = manager.add_guild("test_001", "テスト団A")
         
+        assert result is True
+        
+        # データベースに保存されているか確認
+        guild = manager.get_guild_by_id("test_001")
+        assert guild is not None
         assert guild.guild_id == "test_001"
         assert guild.name == "テスト団A"
-        assert guild.is_active == 0
     
     def test_is_registered(self, db_session):
         """団の登録確認をテスト"""
@@ -25,8 +29,7 @@ class TestGuildManager:
         assert manager.is_registered() is False
         
         # 団を登録
-        manager.register_guild("test_002", "テスト団B")
-        manager.set_active_guild("test_002")
+        manager.add_guild("test_002", "テスト団B")
         
         # 登録済みになる
         assert manager.is_registered() is True
@@ -35,16 +38,17 @@ class TestGuildManager:
         """アクティブ団の設定をテスト"""
         manager = GuildManager(db_session)
         
-        # 初期状態では非アクティブ
-        assert test_guild.is_active == 1
+        # 別の団を追加
+        manager.add_guild("test_003", "テスト団C")
         
-        # 別の団を追加してアクティブ化
-        new_guild = manager.register_guild("test_003", "テスト団C")
-        manager.set_active_guild("test_003")
+        # 新しい団をアクティブ化
+        result = manager.set_active_guild("test_003")
+        assert result is True
         
         # 新しい団がアクティブになる
-        db_session.refresh(new_guild)
-        assert new_guild.is_active == 1
+        active_guild = manager.get_active_guild()
+        assert active_guild is not None
+        assert active_guild.guild_id == "test_003"
         
         # 古い団は非アクティブになる
         db_session.refresh(test_guild)
@@ -58,7 +62,7 @@ class TestGuildManager:
         assert manager.get_active_guild() is None
         
         # 団を登録してアクティブ化
-        manager.register_guild("test_004", "テスト団D")
+        manager.add_guild("test_004", "テスト団D")
         manager.set_active_guild("test_004")
         
         active_guild = manager.get_active_guild()
@@ -71,9 +75,9 @@ class TestGuildManager:
         manager = GuildManager(db_session)
         
         # 複数の団を登録
-        manager.register_guild("test_005", "テスト団E")
-        manager.register_guild("test_006", "テスト団F")
-        manager.register_guild("test_007", "テスト団G")
+        manager.add_guild("test_005", "テスト団E")
+        manager.add_guild("test_006", "テスト団F")
+        manager.add_guild("test_007", "テスト団G")
         
         guilds = manager.get_all_guilds()
         
@@ -93,14 +97,22 @@ class TestGuildManager:
         assert guild.guild_id == "test_guild_001"
         assert guild.name == "テスト団"
     
-    def test_duplicate_guild_registration(self, db_session):
+    def test_duplicate_guild_add(self, db_session):
         """重複する団IDの登録をテスト"""
         manager = GuildManager(db_session)
         
         # 1回目の登録
-        manager.register_guild("duplicate_001", "重複テスト団")
+        result1 = manager.add_guild("duplicate_001", "重複テスト団")
+        assert result1 is True
         
         # 2回目の登録（同じguild_id）
-        with pytest.raises(Exception):  # IntegrityError
-            manager.register_guild("duplicate_001", "別の名前")
-            db_session.commit()
+        result2 = manager.add_guild("duplicate_001", "別の名前")
+        assert result2 is False  # 重複なので失敗
+        
+        # 団は1つのみ
+        guilds = db_session.query(Guild).filter(
+            Guild.guild_id == "duplicate_001"
+        ).all()
+        assert len(guilds) == 1
+        assert guilds[0].name == "重複テスト団"  # 最初の名前のまま
+
