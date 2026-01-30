@@ -96,16 +96,68 @@ gcloud config set run/region asia-northeast1  # 東京リージョン
 
 ### 3.1 PostgreSQLインスタンスを作成
 
-**Windows (PowerShell):**
+**注意**: PostgreSQL 16では`db-f1-micro`が使えません。以下のオプションから選択してください。
+
+**オプション1: PostgreSQL 14（推奨、低コスト）**
+
+Windows (PowerShell):
 ```powershell
-# Cloud SQLインスタンスを作成（小規模無料枠）
+# Cloud SQLインスタンスを作成（最小構成）
 gcloud sql instances create grablu-db `
-  --database-version=POSTGRES_16 `
+  --database-version=POSTGRES_14 `
   --tier=db-f1-micro `
   --region=asia-northeast1 `
   --root-password=YOUR_STRONG_PASSWORD `
   --storage-size=10GB `
   --storage-type=HDD
+
+# データベースを作成
+gcloud sql databases create grablu --instance=grablu-db
+
+# ユーザーを作成（1行版 - コマンドプロンプト/PowerShell両対応）
+gcloud sql users create grablu --instance=grablu-db --password=YOUR_DB_PASSWORD
+
+# または複数行版（PowerShell専用）
+# gcloud sql users create grablu `
+#   --instance=grablu-db `
+#   --password=YOUR_DB_PASSWORD
+```
+
+Mac/Linux (Bash):
+```bash
+# Cloud SQLインスタンスを作成（最小構成）
+gcloud sql instances create grablu-db \
+  --database-version=POSTGRES_14 \
+  --tier=db-f1-micro \
+  --region=asia-northeast1 \
+  --root-password=YOUR_STRONG_PASSWORD \
+  --storage-size=10GB \
+  --storage-type=HDD
+
+# データベースを作成
+gcloud sql databases create grablu --instance=grablu-db
+
+# ユーザーを作成（1行版推奨）
+gcloud sql users create grablu --instance=grablu-db --password=YOUR_DB_PASSWORD
+
+# または複数行版
+# gcloud sql users create grablu \
+#   --instance=grablu-db \
+#   --password=YOUR_DB_PASSWORD
+```
+
+**オプション2: PostgreSQL 16（新しいバージョン、少し高い）**
+
+Windows (PowerShell):
+```powershell
+# Cloud SQLインスタンスを作成（PostgreSQL 16対応）
+gcloud sql instances create grablu-db `
+  --database-version=POSTGRES_16 `
+  --tier=db-n1-standard-1 `
+  --region=asia-northeast1 `
+  --root-password=YOUR_STRONG_PASSWORD `
+  --storage-size=10GB `
+  --storage-type=SSD
 
 # データベースを作成
 gcloud sql databases create grablu --instance=grablu-db
@@ -116,16 +168,16 @@ gcloud sql users create grablu `
   --password=YOUR_DB_PASSWORD
 ```
 
-**Mac/Linux (Bash):**
+Mac/Linux (Bash):
 ```bash
-# Cloud SQLインスタンスを作成（小規模無料枠）
+# Cloud SQLインスタンスを作成（PostgreSQL 16対応）
 gcloud sql instances create grablu-db \
   --database-version=POSTGRES_16 \
-  --tier=db-f1-micro \
+  --tier=db-n1-standard-1 \
   --region=asia-northeast1 \
   --root-password=YOUR_STRONG_PASSWORD \
   --storage-size=10GB \
-  --storage-type=HDD
+  --storage-type=SSD
 
 # データベースを作成
 gcloud sql databases create grablu --instance=grablu-db
@@ -135,6 +187,12 @@ gcloud sql users create grablu \
   --instance=grablu-db \
   --password=YOUR_DB_PASSWORD
 ```
+
+**料金比較:**
+- PostgreSQL 14 + db-f1-micro: 月額 約$7-10
+- PostgreSQL 16 + db-n1-standard-1: 月額 約$25-30
+
+個人プロジェクトでは**オプション1（PostgreSQL 14）を推奨**します。
 
 **注意**: `YOUR_STRONG_PASSWORD`と`YOUR_DB_PASSWORD`は強力なパスワードに置き換えてください。
 

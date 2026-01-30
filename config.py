@@ -22,6 +22,51 @@ def load_config(path="config.yaml"):
         raise
 
 
+class Config:
+    """アプリケーション設定を管理するクラス"""
+    
+    _config = None
+    _database_url = None
+    
+    @classmethod
+    def load(cls, path="config.yaml"):
+        """設定を読み込む"""
+        if cls._config is None:
+            cls._config = load_config(path)
+        return cls._config
+    
+    @classmethod
+    def get(cls, key=None):
+        """設定値を取得"""
+        if cls._config is None:
+            cls.load()
+        if key:
+            return cls._config.get(key)
+        return cls._config
+    
+    @classmethod
+    def get_database_url(cls):
+        """データベース接続URLを取得"""
+        if cls._database_url is not None:
+            return cls._database_url
+            
+        if cls._config is None:
+            cls.load()
+        
+        db = cls._config.get('database', {})
+        host = db.get('host', 'localhost')
+        port = db.get('port', 5432)
+        name = db.get('name', 'grablu')
+        user = db.get('user', 'grablu')
+        password = db.get('password', '')
+        
+        cls._database_url = f"postgresql://{user}:{password}@{host}:{port}/{name}"
+        return cls._database_url
+    
+    # プロパティとして使えるようにする
+    DATABASE_URL = property(lambda self: Config.get_database_url())
+
+
 class OutputConfig:
     """出力ファイル設定を管理するクラス"""
     
