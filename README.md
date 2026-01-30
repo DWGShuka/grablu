@@ -7,6 +7,14 @@ Webスクレイピングでグラブルの団員データを取得し、Google S
 
 **🎉 Webアプリケーション版が利用可能です！** - 詳細は[LOCAL_DEV.md](LOCAL_DEV.md)と[DEPLOY.md](DEPLOY.md)を参照してください。
 
+## 開発に参加する
+
+開発に参加する場合は[CONTRIBUTING.md](CONTRIBUTING.md)をご覧ください。
+
+- **デフォルトブランチ**: `develop`
+- **本番ブランチ**: `main`
+- **CI/CD**: GitHub Actions (自動テスト実行)
+
 ## 機能
 
 ### 団員管理
