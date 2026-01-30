@@ -15,5 +15,9 @@ config.yaml
 # ログファイル
 *.log
 
+# メンバー管理ファイル（個人情報）
+members.json
+test_members.json
+
 # 生成ファイル
 graphs/

@@ -9,6 +9,7 @@ import yaml
 from config import load_config
 from scraper import GuildScraper
 from spreadsheet import SpreadsheetWriter
+from member_tracker import MemberTracker
 
 # ロギング設定
 logging.basicConfig(
@@ -51,8 +52,23 @@ def main():
             members = scraper.scrape_member_table()
             
             # 取得データ表示
-            for name, rank in members:
-                print(f"{name}: {rank}")
+            for member in members:
+                print(f"{member['name']} (ID: {member['player_id']}): {member['rank']}")
+
+            # 団員追跡システムで名前変更を検出
+            tracker = MemberTracker()
+            name_changes = tracker.update_members(members)
+            
+            # 名前変更があった場合は表示
+            if name_changes:
+                logger.info("=" * 60)
+                logger.info("名前変更を検出しました:")
+                for player_id, change in name_changes.items():
+                    logger.info(f"  {change['old_name']} → {change['new_name']} (ID: {player_id})")
+                logger.info("=" * 60)
+            
+            # 履歴を保存
+            tracker.save()
 
             # スプレッドシート書き込み
             writer = SpreadsheetWriter()
@@ -60,7 +76,8 @@ def main():
                 members, 
                 spreadsheet_url, 
                 sheet_name, 
-                event_number=event_number
+                event_number=event_number,
+                name_changes=name_changes  # 名前変更情報を渡す
             )
             logger.info("団員管理処理が完了しました")
 

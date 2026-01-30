@@ -68,7 +68,7 @@ class GuildScraper:
             raise
     
     def scrape_member_table(self):
-        """団員テーブルから名前・順位を取得"""
+        """団員テーブルから名前・ID・順位を取得"""
         try:
             wait_for_element(self.driver, By.CSS_SELECTOR, "table.table")
             results = []
@@ -77,9 +77,25 @@ class GuildScraper:
             for row in rows:
                 cols = row.find_elements(By.TAG_NAME, "td")
                 if len(cols) >= 3:
-                    name = cols[0].text.strip()
+                    # 名前とIDを取得
+                    name_col = cols[0]
+                    name = name_col.text.strip()
+                    
+                    # IDをリンクから取得
+                    player_id = None
+                    links = name_col.find_elements(By.TAG_NAME, "a")
+                    if links:
+                        href = links[0].get_attribute("href")
+                        # https://gbfdata.com/ja/user/21032052 からIDを抽出
+                        if href and "/user/" in href:
+                            player_id = href.split("/user/")[-1]
+                    
                     rank = cols[2].text.strip()
-                    results.append((name, rank))
+                    results.append({
+                        "name": name,
+                        "player_id": player_id,
+                        "rank": rank
+                    })
             
             logger.info(f"{len(results)}人の団員データを取得しました")
             return results

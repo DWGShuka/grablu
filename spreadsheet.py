@@ -32,8 +32,17 @@ class SpreadsheetWriter:
             logger.error("Google Sheets認証エラー: 認証情報が無効です")
             raise
     
-    def write_to_spreadsheet(self, data, spreadsheet_url, sheet_name="団員管理", event_number=None):
-        """スプレッドシートにデータを書き込む"""
+    def write_to_spreadsheet(self, data, spreadsheet_url, sheet_name="団員管理", event_number=None, name_changes=None):
+        """
+        スプレッドシートにデータを書き込む（名前ベース照合）
+        
+        Args:
+            data: [{"name": "...", "player_id": "...", "rank": "..."}, ...]
+            spreadsheet_url: スプレッドシートURL
+            sheet_name: シート名
+            event_number: イベント番号
+            name_changes: 名前変更情報 {player_id: {"old_name": "...", "new_name": "..."}}
+        """
         try:
             if self.client is None:
                 self.authenticate()
@@ -45,6 +54,17 @@ class SpreadsheetWriter:
             # 名前一覧（B列）を取得（1行目はヘッダー）
             name_cells = sheet.col_values(2)
             name_list = [name.strip() for name in name_cells[1:]]  # indexは2行目から
+            
+            # 名前変更があった場合、スプレッドシート上の旧名前を新名前に更新
+            if name_changes:
+                for player_id, change in name_changes.items():
+                    old_name = change["old_name"]
+                    new_name = change["new_name"]
+                    if old_name in name_list:
+                        row_index = name_list.index(old_name) + 2  # 1ベース + ヘッダー
+                        sheet.update_cell(row_index, 2, new_name)
+                        name_list[name_list.index(old_name)] = new_name  # ローカルリストも更新
+                        logger.info(f"スプレッドシート上の名前を更新しました: {old_name} → {new_name}")
 
             # 新しい順位列の挿入（C列に挿入 → 既存列が右にずれる）
             new_col_title = f"第{event_number}回"
@@ -52,8 +72,10 @@ class SpreadsheetWriter:
             logger.info(f"新しい列を追加しました: {new_col_title}")
 
             # データの書き込み
-            for name, rank in data:
-                name = name.strip()
+            for member in data:
+                name = member["name"].strip()
+                rank = member["rank"]
+                
                 if name in name_list:
                     row_index = name_list.index(name) + 2  # 1ベース + ヘッダー
                     sheet.update_cell(row_index, 3, rank)
