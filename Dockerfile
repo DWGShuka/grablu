@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir -r requirements-web.txt
 COPY . .
 
 # ポート公開
-EXPOSE 8000
+EXPOSE 8080
 
-# アプリケーション起動
-CMD ["uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "8000"]
+# アプリケーション起動（Cloud RunのPORT環境変数を使用）
+CMD uvicorn web_app:app --host 0.0.0.0 --port ${PORT:-8080}
