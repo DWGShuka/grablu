@@ -36,3 +36,8 @@ web_app.log
 
 # 逕滓�舌ヵ繧｡繧､繝ｫ
 graphs/
+# テストカバレッジ
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
