@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>団員リスト - Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #555;
+        }
+        
+        .guild-info {
+            background: #e8f5e9;
+            border-left: 4px solid #28a745;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        .event-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+        
+        .event-selector label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        select {
+            flex: 1;
+            max-width: 300px;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .rank-cell {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .top-rank {
+            color: #ffd700;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .no-data-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 団員リスト</h1>
+        <p class="subtitle">イベントごとの団員順位を表示</p>
+        
+        <div class="user-info">
+            ログイン中: <strong>{{ username }}</strong>
+            <a href="/logout" style="margin-left: 20px; color: #667eea; text-decoration: none;">ログアウト</a>
+        </div>
+        
+        {% if guild %}
+        <div class="guild-info">
+            <strong>🏰 {{ guild.guild_name }}</strong>
+        </div>
+        {% endif %}
+        
+        {% if events %}
+        <div class="event-selector">
+            <label for="eventSelect">📅 イベント選択:</label>
+            <select id="eventSelect" onchange="loadEventData()">
+                {% for event in events %}
+                <option value="{{ event.event_number }}">
+                    第{{ event.event_number }}回 ({{ event.fetched_at[:10] }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card">
+                <div class="stat-label">イベント回数</div>
+                <div class="stat-value" id="eventNumber">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">団員数</div>
+                <div class="stat-value" id="memberCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">取得日時</div>
+                <div class="stat-value" id="fetchedDate" style="font-size: 1.2em;">-</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="membersTable">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">表示順</th>
+                        <th>プレイヤーID</th>
+                        <th>名前</th>
+                        <th style="width: 150px;">順位</th>
+                    </tr>
+                </thead>
+                <tbody id="membersTableBody">
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 40px;">読み込み中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <div class="no-data-icon">📊</div>
+            <h2>データがありません</h2>
+            <p style="margin-top: 10px;">まずはホームから団員データを取得してください</p>
+        </div>
+        {% endif %}
+        
+        <a href="/" class="btn">← ホームに戻る</a>
+    </div>
+    
+    <script>
+        async function loadEventData() {
+            const eventSelect = document.getElementById('eventSelect');
+            const eventNumber = eventSelect.value;
+            
+            if (!eventNumber) return;
+            
+            try {
+                const response = await fetch(`/members/event/${eventNumber}`);
+                const data = await response.json();
+                
+                // 統計情報を更新
+                document.getElementById('eventNumber').textContent = `第${data.event_number}回`;
+                document.getElementById('memberCount').textContent = `${data.members.length}人`;
+                document.getElementById('fetchedDate').textContent = data.fetched_at.substring(0, 10);
+                
+                // テーブルを更新
+                const tbody = document.getElementById('membersTableBody');
+                tbody.innerHTML = '';
+                
+                // 順位順にソート
+                const sortedMembers = [...data.members].sort((a, b) => {
+                    const rankA = parseInt(a.rank.replace(/,/g, '')) || 999999;
+                    const rankB = parseInt(b.rank.replace(/,/g, '')) || 999999;
+                    return rankA - rankB;
+                });
+                
+                sortedMembers.forEach((member, index) => {
+                    const row = document.createElement('tr');
+                    const rankClass = index < 3 ? 'rank-cell top-rank' : 'rank-cell';
+                    row.innerHTML = `
+                        <td style="text-align: center;">${index + 1}</td>
+                        <td>${member.player_id}</td>
+                        <td><strong>${member.name}</strong></td>
+                        <td class="${rankClass}">${member.rank}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('データ取得エラー:', error);
+                document.getElementById('membersTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: red; padding: 40px;">
+                            データの取得に失敗しました
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // 初回ロード
+        {% if events %}
+        window.addEventListener('DOMContentLoaded', loadEventData);
+        {% endif %}
+    </script>
+</body>
+</html>

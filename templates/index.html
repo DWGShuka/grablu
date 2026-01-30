@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #555;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .info-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button, .btn {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Grablu 団員管理</h1>
+        <p class="subtitle">グランブルーファンタジー 団員データ管理システム</p>
+        
+        <div class="user-info">
+            ログイン中: <strong>{{ username }}</strong>
+            <a href="/logout" style="margin-left: 20px; color: #667eea; text-decoration: none;">ログアウト</a>
+        </div>
+        
+        <div id="statusMessage" class="status-message"></div>
+        <div id="loader" class="loader"></div>
+        
+        <div class="info-card">
+            <h3>📊 現在の状態</h3>
+            <div class="info-item">
+                <span class="info-label">登録団:</span>
+                <span class="info-value">{{ guild.guild_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">最終取得イベント:</span>
+                <span class="info-value">
+                    {% if history.last_event %}
+                        第{{ history.last_event }}回
+                    {% else %}
+                        未取得
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">登録団員数:</span>
+                <span class="info-value">{{ history.member_count }}人</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">最終更新日時:</span>
+                <span class="info-value">
+                    {% if history.last_updated %}
+                        {{ history.last_updated[:19] }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="executeBtn" class="btn btn-primary" onclick="executeScraping()">
+                ▶️ データ取得開始
+            </button>
+            <a href="/members" class="btn btn-secondary">
+                👥 団員リスト
+            </a>
+            <a href="/history" class="btn btn-secondary">
+                📋 履歴を見る
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        async function executeScraping() {
+            const btn = document.getElementById('executeBtn');
+            const statusMsg = document.getElementById('statusMessage');
+            const loader = document.getElementById('loader');
+            
+            // ボタン無効化
+            btn.disabled = true;
+            btn.textContent = '⏳ 処理中...';
+            
+            // ローダー表示
+            loader.style.display = 'block';
+            statusMsg.style.display = 'none';
+            
+            try {
+                const response = await fetch('/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                loader.style.display = 'none';
+                statusMsg.style.display = 'block';
+                
+                if (result.status === 'success') {
+                    statusMsg.className = 'status-message status-success';
+                    statusMsg.innerHTML = `
+                        ✅ ${result.message}<br>
+                        取得人数: ${result.member_count}人<br>
+                        名前変更: ${result.name_changes}件
+                    `;
+                    
+                    // 3秒後にリロード
+                    setTimeout(() => location.reload(), 3000);
+                } else if (result.status === 'warning') {
+                    statusMsg.className = 'status-message status-warning';
+                    statusMsg.textContent = `⚠️ ${result.message}`;
+                    btn.disabled = false;
+                    btn.textContent = '▶️ データ取得開始';
+                } else {
+                    throw new Error(result.message || '不明なエラー');
+                }
+                
+            } catch (error) {
+                loader.style.display = 'none';
+                statusMsg.style.display = 'block';
+                statusMsg.className = 'status-message status-error';
+                statusMsg.textContent = `❌ エラーが発生しました: ${error.message}`;
+                
+                btn.disabled = false;
+                btn.textContent = '▶️ データ取得開始';
+            }
+        }
+    </script>
+</body>
+</html>

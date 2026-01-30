@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+ENV/
+env/
+
+# ログファイル
+*.log
+
+# データファイル
+members.json
+test_members.json
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# テスト・開発ファイル
+test_*.py
+investigate_*.py
+
+# その他
+graphs/
+*.bat
+README.md
+DEPLOY.md
+LOCAL_DEV.md
+docker-compose.yml

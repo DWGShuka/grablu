@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ユーザー登録 - Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 50px 40px;
+            max-width: 450px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 0.9em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .password-hint {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 10px;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+        
+        .error-message {
+            background-color: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 25px;
+            color: #666;
+        }
+        
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h1>ユーザー登録</h1>
+        <p class="subtitle">Grablu 団員管理システム</p>
+        
+        {% if request.query_params.get('error') == 'password_mismatch' %}
+        <div class="error-message">
+            パスワードが一致しません
+        </div>
+        {% elif request.query_params.get('error') == 'password_too_short' %}
+        <div class="error-message">
+            パスワードは8文字以上にしてください
+        </div>
+        {% elif request.query_params.get('error') == 'username_exists' %}
+        <div class="error-message">
+            このユーザー名は既に使用されています
+        </div>
+        {% elif request.query_params.get('error') == 'email_exists' %}
+        <div class="error-message">
+            このメールアドレスは既に登録されています
+        </div>
+        {% elif request.query_params.get('error') == 'email_required' %}
+        <div class="error-message">
+            メールアドレスは必須です
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label for="username">表示名 <span style="color: red;">*</span></label>
+                <input type="text" 
+                       id="username" 
+                       name="username" 
+                       required 
+                       minlength="2"
+                       maxlength="50"
+                       placeholder="ニックネーム">
+                <p class="password-hint">※ 他のユーザーに表示される名前です</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">メールアドレス <span style="color: red;">*</span></label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       required
+                       placeholder="user@example.com">
+                <p class="password-hint">※ ログインIDとして使用されます</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">パスワード <span style="color: red;">*</span></label>
+                <input type="password" 
+                       id="password" 
+                       name="password" 
+                       required 
+                       minlength="8"
+                       placeholder="8文字以上">
+                <p class="password-hint">※ 8文字以上で入力してください</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="password_confirm">パスワード（確認） <span style="color: red;">*</span></label>
+                <input type="password" 
+                       id="password_confirm" 
+                       name="password_confirm" 
+                       required 
+                       minlength="8"
+                       placeholder="もう一度入力">
+            </div>
+            
+            <button type="submit">登録</button>
+        </form>
+        
+        <div class="login-link">
+            既にアカウントをお持ちの方は<a href="/login">ログイン</a>
+        </div>
+    </div>
+</body>
+</html>

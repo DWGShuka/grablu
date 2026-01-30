@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>履歴 - Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #555;
+        }
+        
+        .summary {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        .summary-item {
+            margin: 10px 0;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .history-list {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .history-arrow {
+            color: #667eea;
+            margin: 0 5px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 名前変更履歴</h1>
+        <p class="subtitle">団員の名前変更履歴を表示します</p>
+        
+        <div class="user-info">
+            ログイン中: <strong>{{ username }}</strong>
+            <a href="/logout" style="margin-left: 20px; color: #667eea; text-decoration: none;">ログアウト</a>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <strong>総団員数:</strong> {{ total_members }}人
+            </div>
+            <div class="summary-item">
+                <strong>名前変更履歴:</strong> {{ name_changes|length }}件
+            </div>
+        </div>
+        
+        <div class="table-container">
+            {% if name_changes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>プレイヤーID</th>
+                        <th>現在の名前</th>
+                        <th>名前履歴</th>
+                        <th>最終変更日</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in name_changes %}
+                    <tr>
+                        <td>{{ change.player_id }}</td>
+                        <td><strong>{{ change.current_name }}</strong></td>
+                        <td class="history-list">
+                            {% for name in change.name_history %}
+                                {{ name }}
+                                {% if not loop.last %}
+                                    <span class="history-arrow">→</span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ change.last_changed }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">
+                名前変更の履歴はまだありません
+            </div>
+            {% endif %}
+        </div>
+        
+        <a href="/" class="btn">← ホームに戻る</a>
+    </div>
+</body>
+</html>

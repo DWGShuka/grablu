@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>団登録 - Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #555;
+        }
+        
+        .search-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .search-box h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #218838;
+        }
+        
+        #searchResults {
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-item:hover {
+            border-color: #667eea;
+        }
+        
+        .result-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .registered-guilds {
+            margin-top: 30px;
+        }
+        
+        .registered-guilds h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .guild-item {
+            background: #e8f5e9;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .modal-body {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+        
+        .btn-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-confirm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .alert-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        .alert-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s;
+            text-align: center;
+        }
+        
+        .alert-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .alert-message {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏰 団登録</h1>
+        <p class="subtitle">団を検索して登録してください</p>
+        
+        <div class="user-info">
+            ログイン中: <strong>{{ username }}</strong>
+            <a href="/logout" style="margin-left: 20px; color: #667eea; text-decoration: none;">ログアウト</a>
+        </div>
+        
+        <div class="search-box">
+            <h2>🔍 団名で検索</h2>
+            <div class="search-form">
+                <input type="text" id="guildName" placeholder="団名を入力してください" />
+                <button class="btn-primary" onclick="searchGuild()">検索</button>
+            </div>
+            
+            <div class="loader" id="loader"></div>
+            <div id="searchResults"></div>
+        </div>
+        
+        {% if guilds %}
+        <div class="registered-guilds">
+            <h2>✅ 登録済みの団</h2>
+            {% for guild in guilds %}
+            <div class="guild-item">
+                <strong>{{ guild.guild_name }}</strong>
+                <span style="color: #666; margin-left: 10px;">ID: {{ guild.guild_id }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if guilds %}
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="/" style="padding: 12px 30px; background: #6c757d; color: white; text-decoration: none; border-radius: 10px; display: inline-block;">
+                ← ホームに戻る
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- 確認モーダル -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">🏰 団を登録</div>
+            <div class="modal-body" id="confirmMessage"></div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeConfirmModal()">キャンセル</button>
+                <button class="btn-confirm" onclick="confirmAddGuild()">登録する</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- アラートモーダル -->
+    <div id="alertModal" class="alert-modal">
+        <div class="alert-content">
+            <div class="alert-icon" id="alertIcon">ℹ️</div>
+            <div class="alert-message" id="alertMessage"></div>
+            <button class="btn-primary" onclick="closeAlertModal()">閉じる</button>
+        </div>
+    </div>
+    
+    <script>
+        let pendingGuild = null;
+        
+        function showAlert(message, icon = 'ℹ️') {
+            document.getElementById('alertIcon').textContent = icon;
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertModal').style.display = 'block';
+        }
+        
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+        
+        function showConfirmModal(guildId, guildName, guildUrl) {
+            pendingGuild = { guildId, guildName, guildUrl };
+            document.getElementById('confirmMessage').textContent = `「${guildName}」を登録しますか？`;
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            pendingGuild = null;
+        }
+        
+        async function confirmAddGuild() {
+            if (!pendingGuild) {
+                showAlert('登録データが見つかりません', '❌');
+                return;
+            }
+            
+            // データをローカル変数にコピー（モーダルを閉じる前に）
+            const guildData = {
+                guildId: pendingGuild.guildId,
+                guildName: pendingGuild.guildName,
+                guildUrl: pendingGuild.guildUrl
+            };
+            
+            closeConfirmModal();
+            
+            const formData = new FormData();
+            formData.append('guild_id', guildData.guildId);
+            formData.append('guild_name', guildData.guildName);
+            formData.append('guild_url', guildData.guildUrl);
+            
+            try {
+                const response = await fetch('/guild/add', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.redirected) {
+                    window.location.href = response.url;
+                }
+            } catch (error) {
+                showAlert('エラーが発生しました: ' + error.message, '❌');
+            }
+        }
+        
+        async function searchGuild() {
+            const guildName = document.getElementById('guildName').value.trim();
+            const loader = document.getElementById('loader');
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!guildName) {
+                showAlert('団名を入力してください', '⚠️');
+                return;
+            }
+            
+            loader.style.display = 'block';
+            resultsDiv.innerHTML = '';
+            
+            try {
+                const formData = new FormData();
+                formData.append('guild_name', guildName);
+                
+                const response = await fetch('/guild/search', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                loader.style.display = 'none';
+                
+                if (result.status === 'success' && result.results.length > 0) {
+                    resultsDiv.innerHTML = '<h3 style="margin-top: 20px; color: #333;">検索結果</h3>';
+                    
+                    result.results.forEach(guild => {
+                        const div = document.createElement('div');
+                        div.className = 'result-item';
+                        div.innerHTML = `
+                            <div>
+                                <div class="result-name">${guild.guild_name}</div>
+                                <div style="font-size: 0.9em; color: #666;">ID: ${guild.guild_id}</div>
+                            </div>
+                            <button class="btn-secondary" onclick="showConfirmModal('${guild.guild_id}', '${guild.guild_name}', '${guild.guild_url}')">
+                                ➕ 登録
+                            </button>
+                        `;
+                        resultsDiv.appendChild(div);
+                    });
+                } else {
+                    resultsDiv.innerHTML = '<div class="no-results">検索結果が見つかりませんでした</div>';
+                }
+            } catch (error) {
+                loader.style.display = 'none';
+                showAlert('エラーが発生しました: ' + error.message, '❌');
+            }
+        }
+        
+        // Enterキーで検索
+        document.getElementById('guildName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchGuild();
+            }
+        });
+        
+        // モーダル外クリックで閉じる
+        window.onclick = function(event) {
+            const confirmModal = document.getElementById('confirmModal');
+            const alertModal = document.getElementById('alertModal');
+            if (event.target == confirmModal) {
+                closeConfirmModal();
+            }
+            if (event.target == alertModal) {
+                closeAlertModal();
+            }
+        }
+    </script>
+</body>
+</html>

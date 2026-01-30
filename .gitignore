@@ -12,12 +12,27 @@ __pycache__/
 credentials.json
 config.yaml
 
+# データベースファイル
+*.db
+*.db-journal
+
+# 旧JSONファイル（参考用に残す場合はコメントアウト）
+members.json
+guilds.json
+
 # ログファイル
 *.log
 
 # メンバー管理ファイル（個人情報）
 members.json
 test_members.json
+guilds.json
+
+# Webアプリケーションログ
+web_app.log
+
+# 環境変数
+.env
 
 # 生成ファイル
 graphs/
