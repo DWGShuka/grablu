@@ -96,6 +96,27 @@ gcloud config set run/region asia-northeast1  # 東京リージョン
 
 ### 3.1 PostgreSQLインスタンスを作成
 
+**Windows (PowerShell):**
+```powershell
+# Cloud SQLインスタンスを作成（小規模無料枠）
+gcloud sql instances create grablu-db `
+  --database-version=POSTGRES_16 `
+  --tier=db-f1-micro `
+  --region=asia-northeast1 `
+  --root-password=YOUR_STRONG_PASSWORD `
+  --storage-size=10GB `
+  --storage-type=HDD
+
+# データベースを作成
+gcloud sql databases create grablu --instance=grablu-db
+
+# ユーザーを作成
+gcloud sql users create grablu `
+  --instance=grablu-db `
+  --password=YOUR_DB_PASSWORD
+```
+
+**Mac/Linux (Bash):**
 ```bash
 # Cloud SQLインスタンスを作成（小規模無料枠）
 gcloud sql instances create grablu-db \
@@ -138,6 +159,19 @@ chmod +x cloud-sql-proxy
 
 ### 4.1 Dockerリポジトリを作成
 
+**Windows (PowerShell):**
+```powershell
+# リポジトリ作成
+gcloud artifacts repositories create grablu-repo `
+  --repository-format=docker `
+  --location=asia-northeast1 `
+  --description="Grablu application repository"
+
+# Docker認証を設定
+gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+```
+
+**Mac/Linux (Bash):**
 ```bash
 # リポジトリ作成
 gcloud artifacts repositories create grablu-repo \
@@ -170,6 +204,24 @@ PASSWORD=your_admin_password
 ### 5.3 Dockerイメージのビルドとプッシュ
 
 ```bash
+**Windows (PowerShell):**
+```powershell
+gcloud run deploy grablu-web `
+  --image=asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest `
+  --platform=managed `
+  --region=asia-northeast1 `
+  --allow-unauthenticated `
+  --add-cloudsql-instances=grablu-app:asia-northeast1:grablu-db `
+  --set-env-vars="DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db" `
+  --set-env-vars="USERNAME=admin" `
+  --set-env-vars="PASSWORD=your_admin_password" `
+  --memory=512Mi `
+  --cpu=1 `
+  --max-instances=10 `
+  --min-instances=0
+```
+
+**Mac/Linux (Bash):**
 # イメージをビルド
 docker build -t asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest .
 
