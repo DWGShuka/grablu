@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登録完了 - Grablu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        
+        .message {
+            color: #666;
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .email-check {
+            background: #f7f7f7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .email-check p {
+            color: #555;
+            font-size: 0.95em;
+            margin-bottom: 10px;
+        }
+        
+        .login-link {
+            margin-top: 30px;
+        }
+        
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .login-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .note {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✉️</div>
+        <h1>登録ありがとうございます！</h1>
+        
+        <p class="message">
+            ご登録いただいたメールアドレスに認証メールを送信しました。
+        </p>
+        
+        <div class="email-check">
+            <p><strong>📧 メールをご確認ください</strong></p>
+            <p>メール内のリンクをクリックして、アカウントを有効化してください。</p>
+        </div>
+        
+        <p class="note">
+            ※ メールが届かない場合は、迷惑メールフォルダをご確認ください。<br>
+            ※ 認証リンクの有効期限は1時間です。
+        </p>
+        
+        <div class="login-link">
+            認証完了後、<a href="/login">こちらからログイン</a>してください
+        </div>
+    </div>
+</body>
+</html>

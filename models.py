@@ -16,14 +16,20 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, nullable=False)  # 表示名（重複可能）
     email = Column(String, unique=True, index=True, nullable=False)  # ログインID（ユニーク）
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
+    hashed_password = Column(String, nullable=True)  # OAuth登録時はNULL可能
+    is_active = Column(Boolean, default=False)  # メール認証後にTrue
     is_admin = Column(Boolean, default=False)
+    email_verified = Column(Boolean, default=False)  # メール認証済みフラグ
+    verification_token = Column(String, nullable=True)  # メール認証トークン
+    oauth_provider = Column(String, nullable=True)  # OAuth プロバイダー (google, etc)
+    oauth_id = Column(String, nullable=True, unique=True)  # OAuth ID
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)
     
     def verify_password(self, password: str) -> bool:
         """パスワード検証"""
+        if not self.hashed_password:
+            return False
         # bcryptは72バイトまでしか処理できないため、長いパスワードは切り詰める
         password_bytes = password.encode('utf-8')[:72]
         return pwd_context.verify(password_bytes, self.hashed_password)

@@ -36,7 +36,26 @@ Webスクレイピングでグラブルの団員データを取得し、Google S
 
 ## セットアップ
 
-### 1. 仮想環境の作成と有効化
+### 1. 環境変数の設定
+
+`.env.example`をコピーして`.env`を作成し、必要な値を設定してください：
+
+```bash
+cp .env.example .env
+```
+
+**Google OAuth設定（必須）:**
+1. [Google Cloud Console](https://console.cloud.google.com/)でプロジェクトを作成
+2. OAuth 2.0クライアントIDを作成
+3. 承認済みのリダイレクトURIに追加：
+   - `http://localhost:8080/auth/google/callback`（開発環境）
+   - `https://gbf-guild-mng.com/auth/google/callback`（本番環境）
+4. `.env`にクライアントIDとシークレットを設定
+
+**メール送信設定（オプション）:**
+- SendGrid、AWS SES、Gmail API等を使用する場合は`auth_utils.py`の`send_verification_email`関数を実装してください
+
+### 2. 仮想環境の作成と有効化
 
 ```powershell
 # 仮想環境を作成

@@ -3,6 +3,7 @@ Grablu Web Application
 FastAPIベースのWebアプリケーション
 """
 import logging
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -25,6 +26,12 @@ from guild_manager import GuildManager
 from database import get_db, init_db
 from sqlalchemy.orm import Session
 from models import User
+from auth_utils import (
+    oauth, 
+    generate_verification_token, 
+    verify_verification_token, 
+    send_verification_email
+)
 
 # ロギング設定
 logging.basicConfig(
@@ -186,30 +193,137 @@ async def register(
             status_code=status.HTTP_302_FOUND
         )
     
-    # 新規ユーザー作成
+    # メール認証トークンを生成
+    verification_token = generate_verification_token(email)
+    
+    # 新規ユーザー作成（メール未認証状態）
     new_user = User(
         username=username,
         email=email,
         hashed_password=User.get_password_hash(password),
-        is_active=True,
-        is_admin=False  # 最初のユーザーは手動でis_admin=Trueに変更
+        is_active=False,  # メール認証後にTrueに変更
+        email_verified=False,
+        verification_token=verification_token,
+        is_admin=False
     )
     db.add(new_user)
     db.commit()
     
     logger.info(f"新規ユーザー登録: {username} ({email})")
     
-    # 登録後に自動ログイン
-    token = create_session_token(username)
-    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="session",
-        value=token,
-        httponly=True,
-        max_age=86400,
-        samesite="lax"
+    # 認証メールを送信
+    base_url = os.environ.get("BASE_URL", "http://localhost:8080")
+    send_verification_email(email, verification_token, base_url)
+    
+    # 登録完了ページにリダイレクト
+    return RedirectResponse(
+        url="/register-complete",
+        status_code=status.HTTP_302_FOUND
     )
-    return response
+
+
+@app.get("/register-complete", response_class=HTMLResponse)
+async def register_complete(request: Request):
+    """登録完了画面"""
+    return templates.TemplateResponse("register_complete.html", {"request": request})
+
+
+@app.get("/verify-email")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """メールアドレス認証"""
+    email = verify_verification_token(token)
+    
+    if not email:
+        raise HTTPException(status_code=400, detail="無効または期限切れのトークンです")
+    
+    # ユーザーを検索して認証状態を更新
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    
+    if user.email_verified:
+        return RedirectResponse(url="/login?verified=already", status_code=status.HTTP_302_FOUND)
+    
+    user.email_verified = True
+    user.is_active = True
+    user.verification_token = None
+    db.commit()
+    
+    logger.info(f"メール認証完了: {email}")
+    
+    return RedirectResponse(url="/login?verified=success", status_code=status.HTTP_302_FOUND)
+
+
+@app.get("/auth/google")
+async def google_login(request: Request):
+    """Google OAuth ログイン"""
+    redirect_uri = request.url_for('google_callback')
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """Google OAuth コールバック"""
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            raise HTTPException(status_code=400, detail="ユーザー情報を取得できませんでした")
+        
+        email = user_info.get('email')
+        name = user_info.get('name')
+        oauth_id = user_info.get('sub')
+        
+        # 既存ユーザーを検索（メールまたはOAuth IDで）
+        user = db.query(User).filter(
+            (User.email == email) | (User.oauth_id == oauth_id)
+        ).first()
+        
+        if user:
+            # 既存ユーザーのログイン
+            if not user.oauth_id:
+                # OAuth情報を追加
+                user.oauth_provider = 'google'
+                user.oauth_id = oauth_id
+                user.email_verified = True
+                user.is_active = True
+            user.last_login = datetime.now()
+            db.commit()
+        else:
+            # 新規ユーザー作成
+            user = User(
+                username=name or email.split('@')[0],
+                email=email,
+                hashed_password=None,  # OAuth登録のためパスワード不要
+                oauth_provider='google',
+                oauth_id=oauth_id,
+                is_active=True,
+                email_verified=True,
+                is_admin=False
+            )
+            db.add(user)
+            db.commit()
+            logger.info(f"Google OAuth新規登録: {email}")
+        
+        # セッション作成してログイン
+        session_token = create_session_token(user.username)
+        response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(
+            key="session",
+            value=session_token,
+            httponly=True,
+            max_age=86400,
+            samesite="lax"
+        )
+        return response
+        
+    except Exception as e:
+        logger.error(f"Google OAuth エラー: {e}")
+        return RedirectResponse(
+            url="/login?error=oauth_failed",
+            status_code=status.HTTP_302_FOUND
+        )
 
 
 @app.get("/", response_class=HTMLResponse)
