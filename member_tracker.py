@@ -13,6 +13,7 @@ class MemberTracker:
     def __init__(self, json_path="members.json"):
         self.json_path = Path(json_path)
         self.members = {}
+        self.last_event_number = None
         self.load()
     
     def load(self):
@@ -22,19 +23,28 @@ class MemberTracker:
                 with open(self.json_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.members = data.get("members", {})
+                    self.last_event_number = data.get("last_event_number")
                 logger.info(f"{len(self.members)}人の団員履歴を読み込みました")
+                if self.last_event_number:
+                    logger.info(f"最後に取得したイベント: 第{self.last_event_number}回")
             except Exception as e:
                 logger.error(f"履歴読み込みエラー: {e}")
                 self.members = {}
+                self.last_event_number = None
         else:
             logger.info("履歴ファイルが存在しないため、新規作成します")
             self.members = {}
+            self.last_event_number = None
     
-    def save(self):
+    def save(self, event_number=None):
         """members.jsonに履歴を保存"""
         try:
+            if event_number is not None:
+                self.last_event_number = event_number
+            
             data = {
                 "last_updated": datetime.now().isoformat(),
+                "last_event_number": self.last_event_number,
                 "members": self.members
             }
             with open(self.json_path, "w", encoding="utf-8") as f:
@@ -114,3 +124,7 @@ class MemberTracker:
             if "name_history" in data and name in data["name_history"]:
                 return data
         return None
+    
+    def is_already_fetched(self, event_number):
+        """指定されたイベント番号のデータが既に取得済みか確認"""
+        return self.last_event_number == event_number

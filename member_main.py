@@ -49,6 +49,18 @@ def main():
                 logger.error("イベント番号が取得できません。処理を中断します")
                 return
             
+            # 取得済みチェック
+            tracker = MemberTracker()
+            if tracker.is_already_fetched(event_number):
+                logger.warning("="*60)
+                logger.warning(f"第{event_number}回のデータは既に取得済みです")
+                logger.warning("重複して実行しますか？")
+                logger.warning("="*60)
+                response = input("続行する場合は 'yes' と入力してください: ")
+                if response.lower() != 'yes':
+                    logger.info("処理を中断しました")
+                    return
+            
             members = scraper.scrape_member_table()
             
             # 取得データ表示
@@ -56,7 +68,6 @@ def main():
                 print(f"{member['name']} (ID: {member['player_id']}): {member['rank']}")
 
             # 団員追跡システムで名前変更を検出
-            tracker = MemberTracker()
             name_changes = tracker.update_members(members)
             
             # 名前変更があった場合は表示
@@ -67,8 +78,8 @@ def main():
                     logger.info(f"  {change['old_name']} → {change['new_name']} (ID: {player_id})")
                 logger.info("=" * 60)
             
-            # 履歴を保存
-            tracker.save()
+            # 履歴を保存（イベント番号も記録）
+            tracker.save(event_number=event_number)
 
             # スプレッドシート書き込み
             writer = SpreadsheetWriter()
