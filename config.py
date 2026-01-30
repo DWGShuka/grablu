@@ -50,6 +50,12 @@ class Config:
         if cls._database_url is not None:
             return cls._database_url
             
+        # 環境変数から直接DATABASE_URLを取得（Cloud Run用）
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            cls._database_url = database_url
+            return cls._database_url
+            
         if cls._config is None:
             cls.load()
         
@@ -58,7 +64,9 @@ class Config:
         port = db.get('port', 5432)
         name = db.get('name', 'grablu')
         user = db.get('user', 'grablu')
-        password = db.get('password', '')
+        
+        # Secret ManagerからDB_PASSWORDを取得（Cloud Run用）
+        password = os.environ.get('DB_PASSWORD', db.get('password', ''))
         
         cls._database_url = f"postgresql://{user}:{password}@{host}:{port}/{name}"
         return cls._database_url
