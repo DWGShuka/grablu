@@ -199,6 +199,34 @@ python drop_main.py
 P(PかつQ) = P(青箱) × P(ヒヒ|青箱) = blue_chest_prob × hihi_prob
 ```
 
+## プロジェクト構造
+
+```
+grablu/
+├── web_app.py              # メインアプリケーション（ホーム、履歴、エラーハンドラー）
+├── routers/                # エンドポイントルーター（機能別分割）
+│   ├── auth.py            # 認証（ログイン、登録、OAuth）
+│   ├── guilds.py          # 団管理（登録、検索、追加）
+│   ├── members.py         # 団員管理（リスト、比較、イベントAPI）
+│   ├── scraping.py        # データ取得処理
+│   └── admin.py           # 管理者機能（メールテスト）
+├── models.py              # データベースモデル
+├── database.py            # DB接続・初期化
+├── member_tracker.py      # 団員履歴管理
+├── guild_manager.py       # 団管理ロジック
+├── scraper.py             # Webスクレイピング
+├── auth_utils.py          # 認証ユーティリティ
+├── config.py              # 設定管理
+├── utils.py               # 共通ユーティリティ
+├── templates/             # HTMLテンプレート
+├── tests/                 # テストコード
+└── docker-compose.yml     # Docker構成
+```
+
+**リファクタリング履歴:**
+- 2026-02-06: Phase 1完了 - web_app.py（1033行）を6ファイルに分割
+- 詳細: [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md)
+
 ## ライセンス
 
 個人使用のみ
