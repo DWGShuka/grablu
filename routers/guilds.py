@@ -72,63 +72,73 @@ async def search_guild(
     username: str = Depends(require_auth)
 ) -> Dict:
     """団を検索してIDと名前を取得"""
+    driver = None
     try:
+        logger.info(f"団検索開始: {guild_name}")
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
         
+        logger.info("Chromeドライバー起動中...")
         driver = webdriver.Chrome(options=chrome_options)
+        logger.info("Chromeドライバー起動完了")
         
-        try:
-            base_url = "https://gbfdata.com/ja"
-            driver.get(base_url)
-            remove_ads(driver)
+        base_url = "https://gbfdata.com/ja"
+        driver.get(base_url)
+        remove_ads(driver)
+        
+        # 「総合」をクリック
+        safe_js_click(driver, By.LINK_TEXT, "総合")
+        remove_ads(driver)
+        
+        # 団名で検索
+        search_box = wait_for_element(driver, By.NAME, "q")
+        search_box.send_keys(guild_name)
+        safe_js_click(driver, By.XPATH, '//form//button')
+        
+        # 検索結果を取得
+        time.sleep(2)
             
-            # 「総合」をクリック
-            safe_js_click(driver, By.LINK_TEXT, "総合")
-            remove_ads(driver)
-            
-            # 団名で検索
-            search_box = wait_for_element(driver, By.NAME, "q")
-            search_box.send_keys(guild_name)
-            safe_js_click(driver, By.XPATH, '//form//button')
-            
-            # 検索結果を取得
-            time.sleep(2)
-            
-            results = []
-            rows = driver.find_elements(By.CSS_SELECTOR, "table.table tbody tr")
-            
-            for row in rows[:10]:  # 上位10件
-                cols = row.find_elements(By.TAG_NAME, "td")
-                if len(cols) >= 2:
-                    name_cell = cols[0]
-                    links = name_cell.find_elements(By.TAG_NAME, "a")
-                    if links:
-                        guild_link = links[0].get_attribute("href")
-                        guild_text = links[0].text.strip()
-                        
-                        # guild_id を URL から抽出
-                        if "/guild/" in guild_link:
-                            guild_id = guild_link.split("/guild/")[-1]
-                            results.append({
-                                "guild_id": guild_id,
-                                "guild_name": guild_text,
-                                "guild_url": guild_link
-                            })
-            
-            return {"status": "success", "results": results}
-            
-        finally:
-            driver.quit()
+        results = []
+        rows = driver.find_elements(By.CSS_SELECTOR, "table.table tbody tr")
+        
+        for row in rows[:10]:  # 上位10件
+            cols = row.find_elements(By.TAG_NAME, "td")
+            if len(cols) >= 2:
+                name_cell = cols[0]
+                links = name_cell.find_elements(By.TAG_NAME, "a")
+                if links:
+                    guild_link = links[0].get_attribute("href")
+                    guild_text = links[0].text.strip()
+                    
+                    # guild_id を URL から抽出
+                    if "/guild/" in guild_link:
+                        guild_id = guild_link.split("/guild/")[-1]
+                        results.append({
+                            "guild_id": guild_id,
+                            "guild_name": guild_text,
+                            "guild_url": guild_link
+                        })
+        
+        logger.info(f"団検索完了: {len(results)}件")
+        return {"status": "success", "results": results}
             
     except Exception as e:
-        logger.error(f"団検索エラー: {e}")
-        return {"status": "error", "message": str(e)}
-
-
-@router.post("/add")
+        logger.error(f"団検索エラー: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"団検索に失敗しました: {str(e)}"
+        )
+    finally:
+        if driver:
+            try:
+                driver.quit()
+                logger.info("Chromeドライバー終了")
+            except Exception as e:
+                logger.error(f"ドライバー終了エラー: {e}")
 async def add_guild(
     request: Request,
     guild_id: str = Form(...),
