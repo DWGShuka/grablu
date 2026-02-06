@@ -90,7 +90,7 @@ pytest tests/ -v
 3. 依存関係が最新かチェック
 
 ```bash
-pip install -r requirements-web.txt --upgrade
+pip install -r requirements.txt --upgrade
 ```
 
 ### カバレッジが低い場合

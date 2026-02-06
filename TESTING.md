@@ -69,7 +69,7 @@ GitHubにプッシュすると自動的にテストが実行されます：
 
 ```bash
 # 依存関係を再インストール
-pip install -r requirements-web.txt
+pip install -r requirements.txt
 pip install pytest pytest-cov flake8
 ```
 
