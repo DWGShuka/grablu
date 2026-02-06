@@ -71,6 +71,9 @@ templates = Jinja2Templates(directory="templates")
 # セッション管理
 SECRET_KEY = "grablu-secret-key-change-in-production-2026"  # 本番では環境変数から
 
+# ベースURL（OAuth リダイレクト用）
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8080")
+
 # 認証情報（環境変数または設定ファイルから読み込むべき）
 USERNAME = "admin"
 PASSWORD = "grablu2026"  # 本番環境では環境変数から取得
@@ -242,7 +245,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
 @app.get("/auth/google")
 async def google_login(request: Request):
     """Google OAuth ログイン"""
-    redirect_uri = request.url_for('google_callback')
+    redirect_uri = f"{BASE_URL}/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
