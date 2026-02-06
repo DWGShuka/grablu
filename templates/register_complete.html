@@ -87,9 +87,27 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">✉️</div>
+        <div class="icon">{% if dev_mode %}✅{% else %}✉️{% endif %}</div>
         <h1>登録ありがとうございます！</h1>
         
+        {% if dev_mode %}
+        <p class="message">
+            開発モードのため、アカウントは既に有効化されています。
+        </p>
+        
+        <div class="email-check" style="background: #e7f5e7; border-left: 4px solid #4caf50;">
+            <p><strong>🚀 すぐにログインできます</strong></p>
+            <p>メール認証は開発環境ではスキップされています。<br>そのまま下のリンクからログインしてください。</p>
+        </div>
+        
+        <p class="note">
+            ※ 本番環境ではメール認証が必要になります。
+        </p>
+        
+        <div class="login-link">
+            <a href="/login">ログイン画面へ</a>
+        </div>
+        {% else %}
         <p class="message">
             ご登録いただいたメールアドレスに認証メールを送信しました。
         </p>
@@ -107,6 +125,7 @@
         <div class="login-link">
             認証完了後、<a href="/login">こちらからログイン</a>してください
         </div>
+        {% endif %}
     </div>
 </body>
 </html>

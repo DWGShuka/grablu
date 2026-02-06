@@ -187,13 +187,16 @@ async def register(
     user_count = db.query(User).count()
     is_first_user = (user_count == 0)
     
+    # 開発モードチェック
+    dev_mode = os.environ.get("DEV_MODE", "false").lower() == "true"
+    
     # 新規ユーザー作成（メール未認証状態）
     new_user = User(
         username=username,
         email=email,
         hashed_password=User.get_password_hash(password),
-        is_active=False,  # メール認証後にTrueに変更
-        email_verified=False,
+        is_active=True if dev_mode else False,  # 開発モードでは即座にアクティブ
+        email_verified=True if dev_mode else False,  # 開発モードでは認証済み扱い
         verification_token=verification_token,
         is_admin=is_first_user  # 最初のユーザーは自動的に管理者
     )
@@ -205,9 +208,12 @@ async def register(
     else:
         logger.info(f"新規ユーザー登録: {username} ({email})")
     
-    # 認証メールを送信
-    base_url = os.environ.get("BASE_URL", "http://localhost:8080")
-    send_verification_email(email, verification_token, base_url)
+    # 開発モードではメール送信をスキップ
+    if not dev_mode:
+        base_url = os.environ.get("BASE_URL", "http://localhost:8080")
+        send_verification_email(email, verification_token, base_url)
+    else:
+        logger.info(f"📧 開発モード: メール認証をスキップしました ({email})")
     
     # 登録完了ページにリダイレクト
     return RedirectResponse(
@@ -219,7 +225,11 @@ async def register(
 @app.get("/register-complete", response_class=HTMLResponse)
 async def register_complete(request: Request):
     """登録完了画面"""
-    return templates.TemplateResponse("register_complete.html", {"request": request})
+    dev_mode = os.environ.get("DEV_MODE", "false").lower() == "true"
+    return templates.TemplateResponse("register_complete.html", {
+        "request": request,
+        "dev_mode": dev_mode
+    })
 
 
 @app.get("/verify-email")
@@ -630,11 +640,70 @@ async def unauthorized_handler(request: Request, exc: HTTPException):
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
 
+@app.exception_handler(403)
+async def forbidden_handler(request: Request, exc: HTTPException):
+    """権限がない場合のエラーページ"""
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "403",
+            "error_icon": "🚫",
+            "error_title": "アクセス権限がありません",
+            "error_message": "このページを閲覧する権限がありません。管理者権限が必要なページです。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "管理者権限が必要な場合は、システム管理者にお問い合わせください。"
+        },
+        status_code=403
+    )
+
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    """ページが見つからない場合のエラーページ"""
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "404",
+            "error_icon": "🔍",
+            "error_title": "ページが見つかりません",
+            "error_message": "お探しのページは存在しないか、移動または削除された可能性があります。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "URLが正しいかご確認ください。"
+        },
+        status_code=404
+    )
+
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc: Exception):
+    """サーバーエラーの場合のエラーページ"""
+    logger.error(f"Internal Server Error: {str(exc)}", exc_info=True)
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "500",
+            "error_icon": "⚠️",
+            "error_title": "サーバーエラーが発生しました",
+            "error_message": "申し訳ございません。システムエラーが発生しました。しばらく経ってから再度お試しください。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "問題が続く場合は、システム管理者にお問い合わせください。"
+        },
+        status_code=500
+    )
+
+
 @app.get("/admin/test-email")
 async def test_email_page(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """メールテスト画面（管理者のみ）"""
     # 管理者権限チェック
-    user = db.query(User).filter(User.username == username).first()
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_admin:
         raise HTTPException(status_code=403, detail="管理者権限が必要です")
     
@@ -819,7 +888,8 @@ async def test_email_send(
 ):
     """メールテスト送信API（管理者のみ）"""
     # 管理者権限チェック
-    user = db.query(User).filter(User.username == username).first()
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_admin:
         raise HTTPException(status_code=403, detail="管理者権限が必要です")
     
