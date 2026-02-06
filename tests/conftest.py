@@ -53,8 +53,7 @@ def test_guild(db_session):
     """テスト用団を作成"""
     guild = Guild(
         guild_id="test_guild_001",
-        name="テスト団",
-        is_active=1
+        name="テスト団"
     )
     db_session.add(guild)
     db_session.commit()
