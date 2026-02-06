@@ -22,6 +22,26 @@
 **バックアップ:**
 - web_app_old.py に旧バージョンを保存
 
+### Phase 2: サービス層導入 - 完了 (2026-02-06)
+
+**実装内容:**
+- ✅ services/ ディレクトリ作成
+- ✅ services/scraping_service.py - スクレイピングビジネスロジック (265行)
+- ✅ services/member_service.py - メンバー管理ビジネスロジック (167行)
+- ✅ services/notification_service.py - 通知機能 (321行)
+- ✅ ルーターからビジネスロジックを分離
+
+**成果:**
+- routers/scraping.py: 188行 → 74行 (60%削減)
+- routers/members.py: 134行 → 98行 (27%削減)
+- 関心の分離達成（HTTP処理 vs ビジネスロジック）
+- テスト容易性の向上
+- コードの再利用性向上
+- 全エンドポイント正常動作確認済み
+
+**詳細レポート:**
+- REFACTORING_PHASE2_REPORT.md 参照
+
 ---
 
 ## 📊 現状分析

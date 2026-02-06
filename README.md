@@ -210,6 +210,10 @@ grablu/
 │   ├── members.py         # 団員管理（リスト、比較、イベントAPI）
 │   ├── scraping.py        # データ取得処理
 │   └── admin.py           # 管理者機能（メールテスト）
+├── services/               # ビジネスロジック層（Phase 2で追加）
+│   ├── scraping_service.py    # スクレイピングロジック
+│   ├── member_service.py      # メンバー管理ロジック
+│   └── notification_service.py # 通知機能（メール送信）
 ├── models.py              # データベースモデル
 ├── database.py            # DB接続・初期化
 ├── member_tracker.py      # 団員履歴管理
@@ -225,6 +229,7 @@ grablu/
 
 **リファクタリング履歴:**
 - 2026-02-06: Phase 1完了 - web_app.py（1033行）を6ファイルに分割
+- 2026-02-06: Phase 2完了 - サービス層導入、ビジネスロジック分離
 - 詳細: [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md)
 
 ## ライセンス

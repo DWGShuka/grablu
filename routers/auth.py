@@ -17,9 +17,9 @@ from models import User
 from auth_utils import (
     oauth,
     generate_verification_token,
-    verify_verification_token,
-    send_verification_email
+    verify_verification_token
 )
+from services import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +152,8 @@ async def register(
     # 開発モードではメール送信をスキップ
     if not dev_mode:
         base_url = os.environ.get("BASE_URL", "http://localhost:8080")
-        send_verification_email(email, verification_token, base_url)
+        notification_service = NotificationService()
+        notification_service.send_verification_email(email, verification_token, base_url)
     else:
         logger.info(f"📧 開発モード: メール認証をスキップしました ({email})")
     

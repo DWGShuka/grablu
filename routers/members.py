@@ -11,9 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import get_db
-from guild_manager import GuildManager
-from member_tracker import MemberTracker
-from models import NameHistory, Member
+from services import MemberService
 
 logger = logging.getLogger(__name__)
 
@@ -51,24 +49,23 @@ async def view_members_compare(
 ):
     """団員比較分析画面"""
     user_id = get_current_user_id(request)
-    guild_manager = GuildManager(db, user_id)
-    active_guild = guild_manager.get_active_guild()
     
-    if not active_guild:
+    # MemberServiceを使用してデータ取得
+    service = MemberService(db, user_id)
+    
+    try:
+        result = service.get_member_compare_data()
+    except ValueError:
+        # 団が登録されていない場合は団登録画面へリダイレクト
         return RedirectResponse(url="/guild/register", status_code=status.HTTP_302_FOUND)
-    
-    tracker = MemberTracker(db, active_guild.id)
-    
-    # 全イベントリストを取得
-    events = tracker.get_all_events()
     
     return templates.TemplateResponse(
         "members_compare.html",
         {
             "request": request,
             "username": username,
-            "guild": {"guild_name": active_guild.name, "guild_id": active_guild.guild_id},
-            "events": events
+            "guild": result.guild_info,
+            "events": result.events
         }
     )
 
@@ -81,30 +78,24 @@ async def view_members(
 ):
     """団員リスト表示画面"""
     user_id = get_current_user_id(request)
-    guild_manager = GuildManager(db, user_id)
-    active_guild = guild_manager.get_active_guild()
     
-    if not active_guild:
+    # MemberServiceを使用してデータ取得
+    service = MemberService(db, user_id)
+    
+    try:
+        result = service.get_member_list_data()
+    except ValueError:
+        # 団が登録されていない場合は団登録画面へリダイレクト
         return RedirectResponse(url="/guild/register", status_code=status.HTTP_302_FOUND)
-    
-    tracker = MemberTracker(db, active_guild.id)
-    
-    # 全イベントリストを取得
-    events = tracker.get_all_events()
-    
-    # 最新イベントのデータを取得
-    latest_event_data = None
-    if events:
-        latest_event_data = tracker.get_event_data(events[0]["event_number"])
     
     return templates.TemplateResponse(
         "members.html",
         {
             "request": request,
             "username": username,
-            "guild": {"guild_name": active_guild.name, "guild_id": active_guild.guild_id},
-            "events": events,
-            "latest_event": latest_event_data
+            "guild": result.guild_info,
+            "events": result.events,
+            "latest_event": result.latest_event
         }
     )
 
@@ -118,16 +109,12 @@ async def get_event_members(
 ) -> Dict:
     """特定イベントの団員データを取得（API）"""
     user_id = get_current_user_id(request)
-    guild_manager = GuildManager(db, user_id)
-    active_guild = guild_manager.get_active_guild()
     
-    if not active_guild:
-        raise HTTPException(status_code=404, detail="団が登録されていません")
+    # MemberServiceを使用してデータ取得
+    service = MemberService(db, user_id)
     
-    tracker = MemberTracker(db, active_guild.id)
-    event_data = tracker.get_event_data(event_number)
-    
-    if not event_data:
-        raise HTTPException(status_code=404, detail="イベントデータが見つかりません")
-    
-    return event_data
+    try:
+        event_data = service.get_event_members_data(event_number)
+        return event_data
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

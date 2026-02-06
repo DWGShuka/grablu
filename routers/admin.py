@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-from auth_utils import generate_verification_token, send_verification_email
+from auth_utils import generate_verification_token
+from services import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +263,8 @@ async def test_email_send(
         
         # メール送信
         base_url = os.environ.get("BASE_URL", "http://localhost:8080")
-        send_verification_email(email, token, base_url)
+        notification_service = NotificationService()
+        notification_service.send_verification_email(email, token, base_url)
         
         # デバッグ用URLを生成（開発モードのみ）
         debug_url = None
