@@ -37,18 +37,24 @@ steps:
   # Dockerイメージをビルド
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA', '.']
-    waitFor: ['cleanup-test-db']
+    waitFor: ['run-tests']
   
   # 最新タグも付ける
   - name: 'gcr.io/cloud-builders/docker'
     args: ['tag', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:latest']
+    id: 'tag-image'
+    waitFor: ['run-tests']
   
   # Artifact Registryにプッシュ
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA']
+    id: 'push-sha'
+    waitFor: ['tag-image']
   
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:latest']
+    id: 'push-latest'
+    waitFor: ['tag-image']
   
   # Cloud Runにデプロイ
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -67,6 +73,7 @@ steps:
       - '--min-instances=0'
       - '--update-secrets=DB_PASSWORD=db-password:latest'
       - '--add-cloudsql-instances=granblue-fantasy-456718:asia-northeast1:grablu-db'
+    waitFor: ['push-sha', 'push-latest']
 
 images:
   - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA'
