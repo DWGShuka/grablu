@@ -59,15 +59,46 @@ def init_db():
                 'email_verified': 'BOOLEAN DEFAULT FALSE',
                 'verification_token': 'VARCHAR',
                 'oauth_provider': 'VARCHAR',
-                'oauth_id': 'VARCHAR UNIQUE'
+                'oauth_id': 'VARCHAR UNIQUE',
+                'active_guild_id': 'INTEGER'
             }
             
             with engine.connect() as conn:
                 for col_name, col_def in required_columns.items():
                     if col_name not in existing_columns:
                         logger.info(f"カラムを追加: users.{col_name}")
-                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                        # PostgreSQLではUNIQUE制約を別途追加
+                        if 'UNIQUE' in col_def:
+                            col_def_without_unique = col_def.replace(' UNIQUE', '')
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def_without_unique}"))
+                            # oauth_idのみUNIQUE制約を追加（NULL許容）
+                            if col_name == 'oauth_id':
+                                try:
+                                    conn.execute(text(f"ALTER TABLE users ADD CONSTRAINT uq_users_{col_name} UNIQUE ({col_name})"))
+                                except Exception:
+                                    pass  # 制約が既に存在する場合はスキップ
+                        else:
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
                         conn.commit()
+        
+        # guildsテーブルが存在する場合、必要なカラムを追加
+        if 'guilds' in inspector.get_table_names():
+            existing_columns = {col['name'] for col in inspector.get_columns('guilds')}
+            if 'user_id' not in existing_columns:
+                logger.info("カラムを追加: guilds.user_id")
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE guilds ADD COLUMN user_id INTEGER"))
+                    conn.commit()
+            
+            # guild_idのユニーク制約を削除（既に存在する場合）
+            try:
+                with engine.connect() as conn:
+                    # PostgreSQL用
+                    conn.execute(text("ALTER TABLE guilds DROP CONSTRAINT IF EXISTS guilds_guild_id_key"))
+                    conn.commit()
+                    logger.info("guilds.guild_idのユニーク制約を削除しました（マルチテナント対応）")
+            except Exception:
+                pass  # 制約が存在しない場合はスキップ
         
         # テーブル作成（存在しない場合のみ）
         Base.metadata.create_all(bind=engine)

@@ -23,8 +23,13 @@ class User(Base):
     verification_token = Column(String, nullable=True)  # メール認証トークン
     oauth_provider = Column(String, nullable=True)  # OAuth プロバイダー (google, etc)
     oauth_id = Column(String, nullable=True, unique=True)  # OAuth ID
+    active_guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=True)  # アクティブな団
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)
+    
+    # リレーション
+    active_guild = relationship("Guild", foreign_keys=[active_guild_id])
+    guilds = relationship("Guild", foreign_keys="Guild.user_id", back_populates="owner")
     
     def verify_password(self, password: str) -> bool:
         """パスワード検証"""
@@ -47,15 +52,21 @@ class Guild(Base):
     __tablename__ = "guilds"
     
     id = Column(Integer, primary_key=True, index=True)
-    guild_id = Column(String, unique=True, index=True, nullable=False)  # gbfdataの団ID
+    guild_id = Column(String, index=True, nullable=False)  # gbfdataの団ID（ユニーク制約削除）
     name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 所有ユーザー
     is_active = Column(Integer, default=0)  # 0 or 1 (SQLiteにbool型がない)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
     # リレーション
+    owner = relationship("User", foreign_keys=[user_id], back_populates="guilds")
     members = relationship("Member", back_populates="guild", cascade="all, delete-orphan")
     event_data = relationship("EventData", back_populates="guild", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'guild_id', name='uix_user_guild'),
+    )
 
 
 class Member(Base):
