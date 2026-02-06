@@ -543,7 +543,8 @@
                 if (isColumnVisible('rank')) {
                     member.ranks.forEach(rank => {
                         if (rank) {
-                            cellsHTML += `<td class="rank-cell">${rank}</td>`;
+                            // 数値をカンマ区切り + "位" で表示
+                            cellsHTML += `<td class="rank-cell">${rank.toLocaleString()}位</td>`;
                         } else {
                             cellsHTML += `<td style="color: #ccc;">-</td>`;
                         }
@@ -561,7 +562,8 @@
         }
         
         function calculateTrend(ranks) {
-            const validRanks = ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+            // rankは既に数値型なので、nullをフィルタリングするだけ
+            const validRanks = ranks.filter(r => r !== null && r !== undefined);
             
             if (validRanks.length < 2) return '-';
             
@@ -588,7 +590,8 @@
             let countWithChange = 0;
             
             comparisonData.forEach(member => {
-                const validRanks = member.ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+                // rankは既に数値型なので変換不要
+                const validRanks = member.ranks.filter(r => r !== null && r !== undefined);
                 if (validRanks.length >= 2) {
                     const change = validRanks[0] - validRanks[validRanks.length - 1];
                     totalChange += Math.abs(change);
@@ -620,10 +623,10 @@
                 }
                 
                 // 順位フィルター（最新の順位で判定）
-                const latestRank = member.ranks.find(r => r !== null);
+                const latestRank = member.ranks.find(r => r !== null && r !== undefined);
                 if (latestRank) {
-                    const rank = parseInt(latestRank.replace(/,/g, ''));
-                    if (rank < rankMin || rank > rankMax) {
+                    // rankは既に数値型なので直接比較
+                    if (latestRank < rankMin || latestRank > rankMax) {
                         return false;
                     }
                 }
@@ -664,8 +667,9 @@
                     valB = b.name;
                 } else if (column.startsWith('rank_')) {
                     const rankIndex = parseInt(column.split('_')[1]);
-                    valA = a.ranks[rankIndex] ? parseInt(a.ranks[rankIndex].replace(/,/g, '')) : Infinity;
-                    valB = b.ranks[rankIndex] ? parseInt(b.ranks[rankIndex].replace(/,/g, '')) : Infinity;
+                    // rankは既に数値型なので直接使用
+                    valA = a.ranks[rankIndex] !== null && a.ranks[rankIndex] !== undefined ? a.ranks[rankIndex] : Infinity;
+                    valB = b.ranks[rankIndex] !== null && b.ranks[rankIndex] !== undefined ? b.ranks[rankIndex] : Infinity;
                 }
                 
                 if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
@@ -722,11 +726,13 @@
                     index + 1,
                     member.player_id,
                     `"${member.name}"`,
-                    ...member.ranks.map(r => r || '-')
+                    // rank は既に数値型なので、そのまま出力（Excel で認識しやすい）
+                    ...member.ranks.map(r => r !== null && r !== undefined ? r : '-')
                 ];
                 
                 if (selectedEvents.length >= 2) {
-                    const validRanks = member.ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+                    // rank は既に数値型なので変換不要
+                    const validRanks = member.ranks.filter(r => r !== null && r !== undefined);
                     if (validRanks.length >= 2) {
                         const diff = validRanks[0] - validRanks[validRanks.length - 1];
                         row.push(diff);

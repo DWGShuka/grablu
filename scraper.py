@@ -139,7 +139,15 @@ class GuildScraper:
                         if href and "/user/" in href:
                             player_id = href.split("/user/")[-1]
                     
-                    rank = cols[2].text.strip()
+                    # 順位を取得して数値に変換: "1位" → 1, "120,456位" → 120456
+                    rank_text = cols[2].text.strip()
+                    try:
+                        # "位" を削除し、カンマを削除して数値に変換
+                        rank = int(rank_text.replace("位", "").replace(",", ""))
+                    except (ValueError, AttributeError):
+                        logger.warning(f"順位の変換に失敗: {rank_text}")
+                        rank = 0  # 変換失敗時はデフォルト値
+                    
                     results.append({
                         "name": name,
                         "player_id": player_id,

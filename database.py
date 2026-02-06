@@ -134,6 +134,49 @@ def init_db():
                     # デフォルトTrueで追加（既存メンバーは全て現在のメンバーとみなす）
                     conn.execute(text("ALTER TABLE members ADD COLUMN is_current_member BOOLEAN DEFAULT TRUE"))
                     conn.commit()
+            
+            # members.guild_id を nullable に変更（団削除時に未所属として残すため）
+            guild_id_col = next((col for col in inspector.get_columns('members') if col['name'] == 'guild_id'), None)
+            if guild_id_col and not guild_id_col.get('nullable', False):
+                logger.info("カラムを修正: members.guild_id → nullable=True (団削除時に未所属として残すため)")
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE members ALTER COLUMN guild_id DROP NOT NULL"))
+                    conn.commit()
+        
+        # member_rankingsテーブルのrankカラムを文字列から数値に変更
+        if 'member_rankings' in inspector.get_table_names():
+            existing_columns = {col['name']: col for col in inspector.get_columns('member_rankings')}
+            
+            if 'rank' in existing_columns:
+                rank_col = existing_columns['rank']
+                # VARCHAR型の場合はINTEGER型に変換
+                if 'VARCHAR' in str(rank_col.get('type', '')).upper() or 'TEXT' in str(rank_col.get('type', '')).upper():
+                    logger.info("カラム型を変更: member_rankings.rank → INTEGER (統計計算・ソート最適化)")
+                    with engine.connect() as conn:
+                        # 既存データを変換: "1位" → 1, "120,456位" → 120456
+                        # まず既存データがあるか確認
+                        result = conn.execute(text("SELECT COUNT(*) FROM member_rankings"))
+                        count = result.scalar()
+                        
+                        if count > 0:
+                            logger.info(f"既存の{count}件のrankデータを数値に変換中...")
+                            # 一時カラムを作成して変換
+                            conn.execute(text("ALTER TABLE member_rankings ADD COLUMN rank_temp INTEGER"))
+                            # "1位" → 1, "120,456位" → 120456 のように変換
+                            conn.execute(text("""
+                                UPDATE member_rankings 
+                                SET rank_temp = CAST(REPLACE(REPLACE(rank, '位', ''), ',', '') AS INTEGER)
+                            """))
+                            # 元のカラムを削除して一時カラムをリネーム
+                            conn.execute(text("ALTER TABLE member_rankings DROP COLUMN rank"))
+                            conn.execute(text("ALTER TABLE member_rankings RENAME COLUMN rank_temp TO rank"))
+                            conn.execute(text("ALTER TABLE member_rankings ALTER COLUMN rank SET NOT NULL"))
+                        else:
+                            # データが無い場合は単純に型変更
+                            conn.execute(text("ALTER TABLE member_rankings ALTER COLUMN rank TYPE INTEGER USING rank::integer"))
+                        
+                        conn.commit()
+                        logger.info("✓ rank カラムの型変更が完了しました")
         
         # テーブル作成（存在しない場合のみ）
         Base.metadata.create_all(bind=engine)
