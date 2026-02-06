@@ -187,13 +187,16 @@ async def register(
     user_count = db.query(User).count()
     is_first_user = (user_count == 0)
     
+    # 開発モードチェック
+    dev_mode = os.environ.get("DEV_MODE", "false").lower() == "true"
+    
     # 新規ユーザー作成（メール未認証状態）
     new_user = User(
         username=username,
         email=email,
         hashed_password=User.get_password_hash(password),
-        is_active=False,  # メール認証後にTrueに変更
-        email_verified=False,
+        is_active=True if dev_mode else False,  # 開発モードでは即座にアクティブ
+        email_verified=True if dev_mode else False,  # 開発モードでは認証済み扱い
         verification_token=verification_token,
         is_admin=is_first_user  # 最初のユーザーは自動的に管理者
     )
@@ -205,9 +208,12 @@ async def register(
     else:
         logger.info(f"新規ユーザー登録: {username} ({email})")
     
-    # 認証メールを送信
-    base_url = os.environ.get("BASE_URL", "http://localhost:8080")
-    send_verification_email(email, verification_token, base_url)
+    # 開発モードではメール送信をスキップ
+    if not dev_mode:
+        base_url = os.environ.get("BASE_URL", "http://localhost:8080")
+        send_verification_email(email, verification_token, base_url)
+    else:
+        logger.info(f"📧 開発モード: メール認証をスキップしました ({email})")
     
     # 登録完了ページにリダイレクト
     return RedirectResponse(
@@ -219,7 +225,11 @@ async def register(
 @app.get("/register-complete", response_class=HTMLResponse)
 async def register_complete(request: Request):
     """登録完了画面"""
-    return templates.TemplateResponse("register_complete.html", {"request": request})
+    dev_mode = os.environ.get("DEV_MODE", "false").lower() == "true"
+    return templates.TemplateResponse("register_complete.html", {
+        "request": request,
+        "dev_mode": dev_mode
+    })
 
 
 @app.get("/verify-email")

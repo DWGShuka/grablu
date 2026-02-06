@@ -34,6 +34,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - SECRET_KEY=${SECRET_KEY}
       - BASE_URL=${BASE_URL:-http://localhost:8080}
+      - DEV_MODE=true
     env_file:
       - .env
     depends_on:
