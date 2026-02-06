@@ -8,12 +8,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, Request, Form, HTTPException, Depends, status, Cookie
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from itsdangerous import URLSafeTimedSerializer, BadSignature
-import secrets
+from starlette.middleware.sessions import SessionMiddleware
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -47,6 +46,16 @@ logger = logging.getLogger(__name__)
 # FastAPIアプリケーション
 app = FastAPI(title="Grablu 団員管理")
 
+# セッションミドルウェアを追加
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="grablu-secret-key-change-in-production-2026",  # 本番では環境変数から
+    session_cookie="session",
+    max_age=86400,  # 24時間
+    same_site="lax",
+    https_only=False  # ローカル開発環境用
+)
+
 # データベース初期化
 logger.info("=" * 60)
 logger.info("Grablu Web Application 起動中...")
@@ -61,37 +70,20 @@ templates = Jinja2Templates(directory="templates")
 
 # セッション管理
 SECRET_KEY = "grablu-secret-key-change-in-production-2026"  # 本番では環境変数から
-serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # 認証情報（環境変数または設定ファイルから読み込むべき）
 USERNAME = "admin"
 PASSWORD = "grablu2026"  # 本番環境では環境変数から取得
 
 
-def create_session_token(username: str) -> str:
-    """セッショントークンを作成"""
-    return serializer.dumps(username, salt="session")
-
-
-def verify_session_token(token: str) -> Optional[str]:
-    """セッショントークンを検証"""
-    try:
-        username = serializer.loads(token, salt="session", max_age=86400)  # 24時間有効
-        return username
-    except BadSignature:
-        return None
-
-
-def get_current_user(session: Optional[str] = Cookie(None)) -> Optional[str]:
+def get_current_user(request: Request) -> Optional[str]:
     """セッションから現在のユーザーを取得"""
-    if session:
-        return verify_session_token(session)
-    return None
+    return request.session.get("username")
 
 
-def require_auth(session: Optional[str] = Cookie(None)) -> str:
+async def require_auth(request: Request) -> str:
     """認証必須のエンドポイント用"""
-    username = get_current_user(session)
+    username = get_current_user(request)
     if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -101,17 +93,17 @@ def require_auth(session: Optional[str] = Cookie(None)) -> str:
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, session: Optional[str] = Cookie(None)):
+async def login_page(request: Request):
     """ログイン画面"""
     # 既にログイン済みの場合はホームへリダイレクト
-    if get_current_user(session):
+    if get_current_user(request):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     
     return templates.TemplateResponse("login.html", {"request": request})
 
 
 @app.post("/login")
-async def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     """ログイン処理"""
     # データベースからメールアドレスでユーザーを検索
     user = db.query(User).filter(User.email == email).first()
@@ -121,16 +113,10 @@ async def login(email: str = Form(...), password: str = Form(...), db: Session =
         user.last_login = datetime.now()
         db.commit()
         
-        token = create_session_token(user.username)
-        response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-        response.set_cookie(
-            key="session",
-            value=token,
-            httponly=True,
-            max_age=86400,  # 24時間
-            samesite="lax"
-        )
-        return response
+        # セッションに保存
+        request.session["username"] = user.username
+        request.session["user_id"] = user.id
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     else:
         return RedirectResponse(
             url="/login?error=1",
@@ -139,18 +125,17 @@ async def login(email: str = Form(...), password: str = Form(...), db: Session =
 
 
 @app.get("/logout")
-async def logout():
+async def logout(request: Request):
     """ログアウト処理"""
-    response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie("session")
-    return response
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
 
 @app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request, session: Optional[str] = Cookie(None)):
+async def register_page(request: Request):
     """ユーザー登録画面"""
     # 既にログイン済みの場合はホームへリダイレクト
-    if get_current_user(session):
+    if get_current_user(request):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     
     return templates.TemplateResponse("register.html", {"request": request})
@@ -307,16 +292,9 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             logger.info(f"Google OAuth新規登録: {email}")
         
         # セッション作成してログイン
-        session_token = create_session_token(user.username)
-        response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-        response.set_cookie(
-            key="session",
-            value=session_token,
-            httponly=True,
-            max_age=86400,
-            samesite="lax"
-        )
-        return response
+        request.session["username"] = user.username
+        request.session["user_id"] = user.id
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
         
     except Exception as e:
         logger.error(f"Google OAuth エラー: {e}")

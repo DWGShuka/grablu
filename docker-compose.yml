@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: grablu
       POSTGRES_USER: grablu
-      POSTGRES_PASSWORD: grablu2026
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-grablu2026}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -21,20 +21,26 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     volumes:
       - ./templates:/app/templates
       - ./config.yaml:/app/config.yaml
       - ./credentials.json:/app/credentials.json
       - ./graphs:/app/graphs
     environment:
-      - USERNAME=admin
-      - PASSWORD=grablu2026
-      - DATABASE_URL=postgresql://grablu:grablu2026@db:5432/grablu
+      - PORT=8080
+      - DATABASE_URL=postgresql://grablu:${DB_PASSWORD:-grablu2026}@db:5432/grablu
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+      - BASE_URL=${BASE_URL:-http://localhost:8080}
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
+    command: uvicorn web_app:app --host 0.0.0.0 --port 8080 --reload
 
 volumes:
   postgres_data:
