@@ -372,7 +372,9 @@ async def guild_register_page(request: Request, username: str = Depends(require_
     """団登録画面"""
     user_id = get_current_user_id(request)
     guild_manager = GuildManager(db, user_id)
-    guilds = guild_manager.get_all_guilds()
+    # ユーザーの所属団のみを取得
+    active_guild = guild_manager.get_active_guild()
+    guilds = [active_guild] if active_guild else []
     
     return templates.TemplateResponse(
         "guild_register.html",
