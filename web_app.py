@@ -630,6 +630,64 @@ async def unauthorized_handler(request: Request, exc: HTTPException):
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
 
+@app.exception_handler(403)
+async def forbidden_handler(request: Request, exc: HTTPException):
+    """権限がない場合のエラーページ"""
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "403",
+            "error_icon": "🚫",
+            "error_title": "アクセス権限がありません",
+            "error_message": "このページを閲覧する権限がありません。管理者権限が必要なページです。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "管理者権限が必要な場合は、システム管理者にお問い合わせください。"
+        },
+        status_code=403
+    )
+
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    """ページが見つからない場合のエラーページ"""
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "404",
+            "error_icon": "🔍",
+            "error_title": "ページが見つかりません",
+            "error_message": "お探しのページは存在しないか、移動または削除された可能性があります。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "URLが正しいかご確認ください。"
+        },
+        status_code=404
+    )
+
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc: Exception):
+    """サーバーエラーの場合のエラーページ"""
+    logger.error(f"Internal Server Error: {str(exc)}", exc_info=True)
+    return templates.TemplateResponse(
+        "error.html",
+        {
+            "request": request,
+            "error_code": "500",
+            "error_icon": "⚠️",
+            "error_title": "サーバーエラーが発生しました",
+            "error_message": "申し訳ございません。システムエラーが発生しました。しばらく経ってから再度お試しください。",
+            "show_home_button": True,
+            "show_login_button": False,
+            "additional_info": "問題が続く場合は、システム管理者にお問い合わせください。"
+        },
+        status_code=500
+    )
+
+
 @app.get("/admin/test-email")
 async def test_email_page(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """メールテスト画面（管理者のみ）"""
