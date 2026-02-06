@@ -34,9 +34,15 @@ steps:
         docker network rm test-network || true
     id: 'run-tests'
   
-  # Dockerイメージをビルド
+  # Dockerイメージをビルド（キャッシュ活用）
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA', '.']
+    args: 
+      - 'build'
+      - '--cache-from=asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:latest'
+      - '--build-arg=BUILDKIT_INLINE_CACHE=1'
+      - '-t'
+      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA'
+      - '.'
     id: 'build-image'
     waitFor: ['run-tests']
   
@@ -82,3 +88,8 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'  # ビルド高速化
+  
+# 変数定義（トリガー実行時にオーバーライド可能）
+substitutions:
+  _USE_CACHE: 'true'  # falseに設定するとキャッシュなしビルド
