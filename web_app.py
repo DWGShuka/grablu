@@ -183,6 +183,10 @@ async def register(
     # メール認証トークンを生成
     verification_token = generate_verification_token(email)
     
+    # 最初のユーザーかどうかチェック
+    user_count = db.query(User).count()
+    is_first_user = (user_count == 0)
+    
     # 新規ユーザー作成（メール未認証状態）
     new_user = User(
         username=username,
@@ -191,12 +195,15 @@ async def register(
         is_active=False,  # メール認証後にTrueに変更
         email_verified=False,
         verification_token=verification_token,
-        is_admin=False
+        is_admin=is_first_user  # 最初のユーザーは自動的に管理者
     )
     db.add(new_user)
     db.commit()
     
-    logger.info(f"新規ユーザー登録: {username} ({email})")
+    if is_first_user:
+        logger.info(f"🎉 初期管理者アカウント作成: {username} ({email})")
+    else:
+        logger.info(f"新規ユーザー登録: {username} ({email})")
     
     # 認証メールを送信
     base_url = os.environ.get("BASE_URL", "http://localhost:8080")
