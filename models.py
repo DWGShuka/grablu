@@ -30,16 +30,16 @@ class User(Base):
         """パスワード検証"""
         if not self.hashed_password:
             return False
-        # bcryptは72バイトまでしか処理できないため、長いパスワードは切り詰める
-        password_truncated = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
-        return pwd_context.verify(password_truncated, self.hashed_password)
+        # bcryptは72文字まで処理可能（実際にはバイト数制限だが、安全のため文字数で制限）
+        password_limited = password[:72] if len(password) > 72 else password
+        return pwd_context.verify(password_limited, self.hashed_password)
     
     @staticmethod
     def get_password_hash(password: str) -> str:
         """パスワードハッシュ化"""
-        # bcryptは72バイトまでしか処理できないため、長いパスワードは切り詰める
-        password_truncated = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
-        return pwd_context.hash(password_truncated)
+        # bcryptは72文字まで処理可能（実際にはバイト数制限だが、安全のため文字数で制限）
+        password_limited = password[:72] if len(password) > 72 else password
+        return pwd_context.hash(password_limited)
 
 
 class Guild(Base):

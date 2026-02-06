@@ -13,7 +13,14 @@ DATABASE_URL = os.getenv(
     "postgresql://grablu:grablu2026@db:5432/grablu"
 )
 
-logger.info(f"Database URL: {DATABASE_URL.replace(DATABASE_URL.split('@')[0].split('//')[1], '***')}")
+# ログにはホスト情報のみ出力（パスワードを含めない）
+try:
+    from urllib.parse import urlparse
+    parsed = urlparse(DATABASE_URL)
+    safe_db_info = f"{parsed.scheme}://{parsed.hostname}:{parsed.port}{parsed.path}"
+    logger.info(f"Database connection: {safe_db_info}")
+except Exception:
+    logger.info("Database connection configured")
 
 engine = create_engine(
     DATABASE_URL,

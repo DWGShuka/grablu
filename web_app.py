@@ -32,12 +32,11 @@ from auth_utils import (
     send_verification_email
 )
 
-# ロギング設定
+# ロギング設定（Cloud Runでは標準出力のみ使用）
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('web_app.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -436,7 +435,7 @@ async def add_guild(
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     except Exception as e:
         logger.error(f"団登録エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="団の登録に失敗しました")
 
 
 @app.post("/execute")
@@ -520,7 +519,7 @@ async def execute_scraping(username: str = Depends(require_auth), db: Session = 
             
     except Exception as e:
         logger.error(f"エラーが発生しました: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="データ取得に失敗しました")
 
 
 @app.get("/members", response_class=HTMLResponse)
