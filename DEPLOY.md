@@ -253,16 +253,55 @@ gcloud auth configure-docker asia-northeast1-docker.pkg.dev
 
 `.env.production`を作成（**Gitにコミットしない**）:
 
+**SMTP使用の場合（推奨・無料）:**
 ```env
 DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db
 USERNAME=admin
 PASSWORD=your_admin_password
+SECRET_KEY=your_secret_key_for_email_tokens_and_sessions
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
+SMTP_FROM_EMAIL=noreply@gbf-guild-mng.com
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+BASE_URL=https://gbf-guild-mng.com
 ```
+
+**SendGrid使用の場合:**
+```env
+DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db
+USERNAME=admin
+PASSWORD=your_admin_password
+SECRET_KEY=your_secret_key_for_email_tokens_and_sessions
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=noreply@gbf-guild-mng.com
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+BASE_URL=https://gbf-guild-mng.com
+```
+
+**環境変数の説明:**
+- `DATABASE_URL`: PostgreSQL接続文字列（Cloud SQL用）
+- `USERNAME` / `PASSWORD`: 管理者アカウント（初期認証用）
+- `SECRET_KEY`: メール認証トークンとセッション用のシークレットキー
+- **SMTP設定（推奨）**:
+  - `SMTP_HOST`: SMTPサーバーホスト
+  - `SMTP_PORT`: SMTPポート（通常587）
+  - `SMTP_USER`: SMTPユーザー名（メールアドレス）
+  - `SMTP_PASSWORD`: SMTPパスワード（Gmailアプリパスワード）
+  - `SMTP_FROM_EMAIL`: メール送信元アドレス
+- **SendGrid設定（オプション）**:
+  - `SENDGRID_API_KEY`: SendGridのAPIキー
+  - `SENDGRID_FROM_EMAIL`: メール送信元アドレス
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth認証用
+- `BASE_URL`: アプリケーションのベースURL（メール内リンク生成用）
 
 ### 5.3 Dockerイメージのビルドとプッシュ
 
 ```bash
-**Windows (PowerShell):**
+**Windows (PowerShell) - SMTP使用:**
 ```powershell
 gcloud run deploy grablu-web `
   --image=asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest `
@@ -273,6 +312,34 @@ gcloud run deploy grablu-web `
   --set-env-vars="DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db" `
   --set-env-vars="USERNAME=admin" `
   --set-env-vars="PASSWORD=your_admin_password" `
+  --set-env-vars="SECRET_KEY=your_secret_key_change_in_production" `
+  --set-env-vars="SMTP_HOST=smtp.gmail.com" `
+  --set-env-vars="SMTP_PORT=587" `
+  --set-env-vars="SMTP_USER=your@gmail.com" `
+  --set-env-vars="SMTP_PASSWORD=your_gmail_app_password" `
+  --set-env-vars="SMTP_FROM_EMAIL=noreply@gbf-guild-mng.com" `
+  --set-env-vars="BASE_URL=https://grablu-web-xxxxxxxxxx-an.a.run.app" `
+  --memory=512Mi `
+  --cpu=1 `
+  --max-instances=10 `
+  --min-instances=0
+```
+
+**Windows (PowerShell) - SendGrid使用:**
+```powershell
+gcloud run deploy grablu-web `
+  --image=asia-northeast1-docker.pkg.dev/grablu-app/grablu-repo/web:latest `
+  --platform=managed `
+  --region=asia-northeast1 `
+  --allow-unauthenticated `
+  --add-cloudsql-instances=grablu-app:asia-northeast1:grablu-db `
+  --set-env-vars="DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db" `
+  --set-env-vars="USERNAME=admin" `
+  --set-env-vars="PASSWORD=your_admin_password" `
+  --set-env-vars="SECRET_KEY=your_secret_key_change_in_production" `
+  --set-env-vars="SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxx" `
+  --set-env-vars="SENDGRID_FROM_EMAIL=noreply@gbf-guild-mng.com" `
+  --set-env-vars="BASE_URL=https://grablu-web-xxxxxxxxxx-an.a.run.app" `
   --memory=512Mi `
   --cpu=1 `
   --max-instances=10 `
@@ -303,11 +370,20 @@ gcloud run deploy grablu-web \
   --set-env-vars="DATABASE_URL=postgresql://grablu:YOUR_DB_PASSWORD@/grablu?host=/cloudsql/grablu-app:asia-northeast1:grablu-db" \
   --set-env-vars="USERNAME=admin" \
   --set-env-vars="PASSWORD=your_admin_password" \
+  --set-env-vars="SECRET_KEY=your_secret_key_change_in_production" \
+  --set-env-vars="SMTP_HOST=smtp.gmail.com" \
+  --set-env-vars="SMTP_PORT=587" \
+  --set-env-vars="SMTP_USER=your@gmail.com" \
+  --set-env-vars="SMTP_PASSWORD=your_gmail_app_password" \
+  --set-env-vars="SMTP_FROM_EMAIL=noreply@gbf-guild-mng.com" \
+  --set-env-vars="BASE_URL=https://grablu-web-xxxxxxxxxx-an.a.run.app" \
   --memory=512Mi \
   --cpu=1 \
   --max-instances=10 \
   --min-instances=0
 ```
+
+※ SendGrid使用時は、SMTP_* の代わりに SENDGRID_API_KEY と SENDGRID_FROM_EMAIL を設定してください。
 
 ### 6.2 デプロイ完了
 
@@ -320,9 +396,142 @@ Service URL: https://grablu-web-xxxxxxxxxx-an.a.run.app
 
 ---
 
-## 7. CI/CDの設定（オプション）
+## 7. メール認証設定
 
-### 7.1 Cloud Buildを使った自動デプロイ
+メール送信には2つの方法があります：
+
+### 方法1: SMTP（推奨・完全無料）
+
+自分のドメインのメールサーバーを使う方法です。
+
+#### オプションA: Gmail / Google Workspace
+
+**ステップ1: Gmailアプリパスワードの取得**
+
+1. https://myaccount.google.com/apppasswords にアクセス
+2. 「アプリを選択」→「その他（カスタム名）」→「Grablu」
+3. 「生成」をクリック
+4. **16桁のパスワードをコピー**（スペースなし）
+
+**ステップ2: Cloud Runに環境変数を設定**
+
+```bash
+gcloud run services update grablu-web \
+  --region=asia-northeast1 \
+  --set-env-vars="SMTP_HOST=smtp.gmail.com" \
+  --set-env-vars="SMTP_PORT=587" \
+  --set-env-vars="SMTP_USER=your@gmail.com" \
+  --set-env-vars="SMTP_PASSWORD=your_app_password" \
+  --set-env-vars="SMTP_FROM_EMAIL=noreply@gbf-guild-mng.com"
+```
+
+**送信制限**: 1日500通（個人Gmail）/ 2,000通（Google Workspace）
+
+#### オプションB: 独自SMTPサーバー
+
+ドメインのメールサービスのSMTP設定を使用:
+
+```bash
+gcloud run services update grablu-web \
+  --region=asia-northeast1 \
+  --set-env-vars="SMTP_HOST=mail.your-domain.com" \
+  --set-env-vars="SMTP_PORT=587" \
+  --set-env-vars="SMTP_USER=noreply@gbf-guild-mng.com" \
+  --set-env-vars="SMTP_PASSWORD=your_email_password" \
+  --set-env-vars="SMTP_FROM_EMAIL=noreply@gbf-guild-mng.com"
+```
+
+### 方法2: SendGrid（オプション）
+
+### 方法2: SendGrid（オプション）
+
+SendGridを使う場合の手順です。
+
+#### ステップ1: SendGridアカウント作成
+
+1. https://sendgrid.com/ にアクセス
+2. 「Start for Free」をクリック
+3. アカウント情報を入力して登録
+4. メール認証を完了
+
+**無料プラン**: 月100通まで無料
+
+#### ステップ2: SendGrid API Key の取得
+
+1. SendGridダッシュボードにログイン
+2. 左メニュー → 「Settings」→ 「API Keys」
+3. 「Create API Key」をクリック
+4. API Key名: `Grablu-Production`
+5. アクセス権限: 「Mail Send」
+6. 「Create & View」をクリック
+7. **表示されたAPIキーをコピー**（再表示不可）
+
+APIキーの形式: `SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+#### ステップ3: 送信元メールアドレスの認証
+
+1. SendGridダッシュボード → 「Settings」→ 「Sender Authentication」
+2. 「Verify a Single Sender」をクリック
+3. メールアドレス（例: `noreply@gbf-guild-mng.com`）を入力
+4. 送信された確認メールのリンクをクリック
+
+#### ステップ4: Cloud Runに環境変数を設定
+
+```bash
+gcloud run services update grablu-web \
+  --region=asia-northeast1 \
+  --set-env-vars="SENDGRID_API_KEY=SG.your_actual_api_key_here" \
+  --set-env-vars="SENDGRID_FROM_EMAIL=noreply@gbf-guild-mng.com"
+```
+
+**注意**: SendGridライブラリが必要です（requirements.txtに含まれています）
+
+### メール送信テスト
+
+デプロイ完了後、管理者アカウントでログインして以下のURLにアクセス:
+
+```
+https://your-app-url/admin/test-email
+```
+
+1. テスト用メールアドレスを入力
+2. 「テストメールを送信」をクリック
+3. メールが届くことを確認
+
+**トラブルシューティング:**
+
+- **SMTP送信エラー**:
+  - Gmailアプリパスワードが正しいか確認
+  - 2段階認証プロセスが有効か確認
+  - ログを確認: `gcloud run services logs tail grablu-web`
+
+- **SendGrid送信エラー**:
+  - SendGrid APIキーが正しく設定されているか確認
+  - 送信元メールアドレスが認証済みか確認
+  - SendGrid ダッシュボードの「Activity」でエラーログを確認
+
+- **開発モード**（メール未設定）:
+  - ログに認証URLが出力されます
+  - ログから認証URLをコピーしてブラウザでアクセス可能
+
+### 送信制限と料金
+
+**SMTP（推奨・無料）:**
+- Gmail: 1日500通まで無料
+- Google Workspace: 1日2,000通まで無料
+- 独自サーバー: プロバイダーによる（通常無料）
+
+**SendGrid:**
+- 無料プラン: 月100通まで
+- 有料プラン: 月$19.95〜
+
+詳細は [EMAIL_SETUP.md](EMAIL_SETUP.md) を参照してください。
+
+---
+
+## 8. CI/CDの設定（オプション）
+
+### 8.1 Cloud Buildを使った自動デプロイ
 
 `cloudbuild.yaml`を作成:
 
@@ -364,9 +573,9 @@ gcloud builds triggers create github \
 
 ---
 
-## 8. データベース初期化
+## 9. データベース初期化
 
-### 8.1 初回デプロイ後のデータベース確認
+### 9.1 初回デプロイ後のデータベース確認
 
 デプロイ後、初めてアプリケーションにアクセスすると自動的にテーブルが作成されます。
 
@@ -375,7 +584,7 @@ gcloud builds triggers create github \
 gcloud run services logs read grablu-web --limit=50
 ```
 
-### 8.2 手動でのテーブル確認（オプション）
+### 9.2 手動でのテーブル確認（オプション）
 
 ```bash
 # Cloud SQLに接続
@@ -388,9 +597,9 @@ gcloud sql connect grablu-db --user=grablu --quiet
 
 ---
 
-## 9. 運用と監視
+## 10. 運用と監視
 
-### 9.1 ログの確認
+### 10.1 ログの確認
 
 ```bash
 # リアルタイムログ
@@ -400,7 +609,7 @@ gcloud run services logs tail grablu-web
 gcloud run services logs read grablu-web --limit=50
 ```
 
-### 9.2 メトリクスの確認
+### 10.2 メトリクスの確認
 
 GCPコンソール → Cloud Run → grablu-web → 「メトリクス」タブ
 
@@ -410,7 +619,7 @@ GCPコンソール → Cloud Run → grablu-web → 「メトリクス」タブ
 - エラー率
 - CPU/メモリ使用率
 
-### 9.3 アラート設定
+### 10.3 アラート設定
 
 1. GCPコンソール → Monitoring → Alerting
 2. 「ポリシーを作成」をクリック
@@ -421,13 +630,13 @@ GCPコンソール → Cloud Run → grablu-web → 「メトリクス」タブ
 
 ---
 
-## 10. コスト最適化
+## 11. コスト最適化
 
-### 10.1 無料枠の確認
+### 11.1 無料枠の確認
 
 GCPコンソール → お支払い → 「レポート」
 
-### 10.2 コスト削減のヒント
+### 11.2 コスト削減のヒント
 
 1. **最小インスタンス数を0に設定**
    ```bash
@@ -452,9 +661,9 @@ GCPコンソール → お支払い → 「レポート」
 
 ---
 
-## 11. トラブルシューティング
+## 12. トラブルシューティング
 
-### 11.1 デプロイが失敗する
+### 12.1 デプロイが失敗する
 
 ```bash
 # ログを確認
@@ -464,7 +673,7 @@ gcloud run services logs read grablu-web --limit=100
 gcloud run services describe grablu-web --region=asia-northeast1
 ```
 
-### 11.2 データベース接続エラー
+### 12.2 データベース接続エラー
 
 ```bash
 # Cloud SQLインスタンスの状態確認
@@ -476,7 +685,7 @@ gcloud sql instances describe grablu-db --format="value(connectionName)"
 
 正しい形式: `grablu-app:asia-northeast1:grablu-db`
 
-### 11.3 アプリケーションが起動しない
+### 12.3 アプリケーションが起動しない
 
 1. ローカルでDockerイメージをテスト:
    ```bash
@@ -492,9 +701,9 @@ gcloud sql instances describe grablu-db --format="value(connectionName)"
 
 ---
 
-## 12. カスタムドメインの設定（オプション）
+## 13. カスタムドメインの設定（オプション）
 
-### 12.1 ドメインのマッピング
+### 13.1 ドメインのマッピング
 
 ```bash
 # ドメインを追加
@@ -504,15 +713,15 @@ gcloud run domain-mappings create \
   --region=asia-northeast1
 ```
 
-### 12.2 DNSレコードの設定
+### 13.2 DNSレコードの設定
 
 Cloud Runが表示するDNSレコードを、ドメインレジストラで設定してください。
 
 ---
 
-## 13. セキュリティ強化
+## 14. セキュリティ強化
 
-### 13.1 認証の追加
+### 14.1 認証の追加
 
 Cloud Run IAMで特定のユーザーのみアクセス可能に:
 
@@ -529,7 +738,7 @@ gcloud run services add-iam-policy-binding grablu-web \
   --role="roles/run.invoker"
 ```
 
-### 13.2 Secret Managerの使用
+### 14.2 Secret Managerの使用
 
 機密情報をSecret Managerに保存:
 
