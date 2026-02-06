@@ -37,13 +37,14 @@ steps:
   # Dockerイメージをビルド
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA', '.']
+    id: 'build-image'
     waitFor: ['run-tests']
   
   # 最新タグも付ける
   - name: 'gcr.io/cloud-builders/docker'
     args: ['tag', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:$COMMIT_SHA', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/grablu-repo/grablu:latest']
     id: 'tag-image'
-    waitFor: ['run-tests']
+    waitFor: ['build-image']
   
   # Artifact Registryにプッシュ
   - name: 'gcr.io/cloud-builders/docker'
