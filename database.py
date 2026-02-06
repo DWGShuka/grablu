@@ -82,9 +82,15 @@ def init_db():
                         conn.commit()
                 
                 # active_guild_id を guild_id にリネーム（存在する場合）
-                if 'active_guild_id' in existing_columns and 'guild_id' not in existing_columns:
-                    logger.info("カラムをリネーム: users.active_guild_id -> guild_id")
-                    conn.execute(text("ALTER TABLE users RENAME COLUMN active_guild_id TO guild_id"))
+                if 'active_guild_id' in existing_columns:
+                    if 'guild_id' in existing_columns:
+                        # 両方存在する場合は active_guild_id を削除
+                        logger.info("カラムを削除: users.active_guild_id（guild_idが既に存在）")
+                        conn.execute(text("ALTER TABLE users DROP COLUMN active_guild_id"))
+                    else:
+                        # active_guild_id のみ存在する場合はリネーム
+                        logger.info("カラムをリネーム: users.active_guild_id -> guild_id")
+                        conn.execute(text("ALTER TABLE users RENAME COLUMN active_guild_id TO guild_id"))
                     conn.commit()
         
         # guildsテーブルが存在する場合、不要なカラムを削除
