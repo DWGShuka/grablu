@@ -100,3 +100,34 @@ pip install -r requirements.txt --upgrade
 pytest tests/ --cov=. --cov-report=html
 # ブラウザでhtmlcov/index.htmlを開く
 ```
+
+## Cloud Build ビルドキャッシュ
+
+ビルド時間を短縮するため、Dockerイメージキャッシュを使用しています。
+
+### キャッシュの仕組み
+
+- 前回ビルドしたイメージを`--cache-from`で参照
+- `requirements.txt`が変更されていない場合、依存関係のインストールをスキップ
+- 通常30-50%のビルド時間短縮
+
+### キャッシュを無効化する方法
+
+問題が発生した場合、完全なリビルドを実行できます：
+
+```bash
+# Google Cloud Consoleから:
+# 1. Cloud Build → トリガー → 対象トリガーを選択
+# 2. 「実行」→「詳細オプション」
+# 3. 変数を追加: _USE_CACHE = false
+# 4. 「ビルドを実行」
+
+# または gcloud CLIから:
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_USE_CACHE=false
+```
+
+### ビルド高速化設定
+
+- マシンタイプ: `E2_HIGHCPU_8` (8 vCPU)
+- Dockerレイヤーキャッシュ有効
+- 並列ビルド対応
