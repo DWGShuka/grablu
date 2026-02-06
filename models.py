@@ -23,8 +23,12 @@ class User(Base):
     verification_token = Column(String, nullable=True)  # メール認証トークン
     oauth_provider = Column(String, nullable=True)  # OAuth プロバイダー (google, etc)
     oauth_id = Column(String, nullable=True, unique=True)  # OAuth ID
+    guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=True)  # 所属団
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)
+    
+    # リレーション
+    guild = relationship("Guild", back_populates="members")
     
     def verify_password(self, password: str) -> bool:
         """パスワード検証"""
@@ -47,19 +51,19 @@ class Guild(Base):
     __tablename__ = "guilds"
     
     id = Column(Integer, primary_key=True, index=True)
-    guild_id = Column(String, unique=True, index=True, nullable=False)  # gbfdataの団ID
+    guild_id = Column(String, unique=True, index=True, nullable=False)  # gbfdataの団ID（ユニーク）
     name = Column(String, nullable=False)
-    is_active = Column(Integer, default=0)  # 0 or 1 (SQLiteにbool型がない)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
     # リレーション
-    members = relationship("Member", back_populates="guild", cascade="all, delete-orphan")
+    members = relationship("User", back_populates="guild")  # 団メンバー（最大30人）
+    guild_members = relationship("Member", back_populates="guild", cascade="all, delete-orphan")  # グラブルの団員データ
     event_data = relationship("EventData", back_populates="guild", cascade="all, delete-orphan")
 
 
 class Member(Base):
-    """団員情報"""
+    """団員情報（グラブルのプレイヤー）"""
     __tablename__ = "members"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -70,7 +74,7 @@ class Member(Base):
     last_seen = Column(DateTime, default=datetime.now)
     
     # リレーション
-    guild = relationship("Guild", back_populates="members")
+    guild = relationship("Guild", back_populates="guild_members")
     name_history = relationship("NameHistory", back_populates="member", cascade="all, delete-orphan")
     rankings = relationship("MemberRanking", back_populates="member", cascade="all, delete-orphan")
 

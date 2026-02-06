@@ -83,6 +83,11 @@ def get_current_user(request: Request) -> Optional[str]:
     return request.session.get("username")
 
 
+def get_current_user_id(request: Request) -> Optional[int]:
+    """セッションから現在のユーザーIDを取得"""
+    return request.session.get("user_id")
+
+
 async def require_auth(request: Request) -> str:
     """認証必須のエンドポイント用"""
     username = get_current_user(request)
@@ -326,7 +331,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """ホーム画面"""
-    guild_manager = GuildManager(db)
+    user_id = get_current_user_id(request)
+    guild_manager = GuildManager(db, user_id)
     
     # 団が未登録の場合は登録画面へリダイレクト
     if not guild_manager.is_registered():
@@ -364,7 +370,8 @@ async def home(request: Request, username: str = Depends(require_auth), db: Sess
 @app.get("/guild/register", response_class=HTMLResponse)
 async def guild_register_page(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """団登録画面"""
-    guild_manager = GuildManager(db)
+    user_id = get_current_user_id(request)
+    guild_manager = GuildManager(db, user_id)
     guilds = guild_manager.get_all_guilds()
     
     return templates.TemplateResponse(
@@ -438,6 +445,7 @@ async def search_guild(guild_name: str = Form(...), username: str = Depends(requ
 
 @app.post("/guild/add")
 async def add_guild(
+    request: Request,
     guild_id: str = Form(...),
     guild_name: str = Form(...),
     guild_url: str = Form(...),
@@ -446,7 +454,8 @@ async def add_guild(
 ):
     """団を登録"""
     try:
-        guild_manager = GuildManager(db)
+        user_id = get_current_user_id(request)
+        guild_manager = GuildManager(db, user_id)
         guild_manager.add_guild(guild_id, guild_name)
         
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
@@ -456,13 +465,14 @@ async def add_guild(
 
 
 @app.post("/execute")
-async def execute_scraping(username: str = Depends(require_auth), db: Session = Depends(get_db)):
+async def execute_scraping(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """団員データ取得実行"""
     try:
         logger.info(f"団員データ取得開始 (ユーザー: {username})")
         
         # 登録された団情報を取得
-        guild_manager = GuildManager(db)
+        user_id = get_current_user_id(request)
+        guild_manager = GuildManager(db, user_id)
         active_guild = guild_manager.get_active_guild()
         
         if not active_guild:
@@ -542,7 +552,8 @@ async def execute_scraping(username: str = Depends(require_auth), db: Session = 
 @app.get("/members", response_class=HTMLResponse)
 async def view_members(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """団員リスト表示画面"""
-    guild_manager = GuildManager(db)
+    user_id = get_current_user_id(request)
+    guild_manager = GuildManager(db, user_id)
     active_guild = guild_manager.get_active_guild()
     
     if not active_guild:
@@ -571,9 +582,10 @@ async def view_members(request: Request, username: str = Depends(require_auth), 
 
 
 @app.get("/members/event/{event_number}")
-async def get_event_members(event_number: int, username: str = Depends(require_auth), db: Session = Depends(get_db)):
+async def get_event_members(request: Request, event_number: int, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """特定イベントの団員データを取得（API）"""
-    guild_manager = GuildManager(db)
+    user_id = get_current_user_id(request)
+    guild_manager = GuildManager(db, user_id)
     active_guild = guild_manager.get_active_guild()
     
     if not active_guild:
@@ -591,7 +603,8 @@ async def get_event_members(event_number: int, username: str = Depends(require_a
 @app.get("/history", response_class=HTMLResponse)
 async def view_history(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """履歴・名前変更履歴画面"""
-    guild_manager = GuildManager(db)
+    user_id = get_current_user_id(request)
+    guild_manager = GuildManager(db, user_id)
     active_guild = guild_manager.get_active_guild()
     
     if not active_guild:

@@ -59,15 +59,72 @@ def init_db():
                 'email_verified': 'BOOLEAN DEFAULT FALSE',
                 'verification_token': 'VARCHAR',
                 'oauth_provider': 'VARCHAR',
-                'oauth_id': 'VARCHAR UNIQUE'
+                'oauth_id': 'VARCHAR UNIQUE',
+                'guild_id': 'INTEGER'
             }
             
             with engine.connect() as conn:
                 for col_name, col_def in required_columns.items():
                     if col_name not in existing_columns:
                         logger.info(f"カラムを追加: users.{col_name}")
-                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                        # PostgreSQLではUNIQUE制約を別途追加
+                        if 'UNIQUE' in col_def:
+                            col_def_without_unique = col_def.replace(' UNIQUE', '')
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def_without_unique}"))
+                            # oauth_idのみUNIQUE制約を追加（NULL許容）
+                            if col_name == 'oauth_id':
+                                try:
+                                    conn.execute(text(f"ALTER TABLE users ADD CONSTRAINT uq_users_{col_name} UNIQUE ({col_name})"))
+                                except Exception:
+                                    pass  # 制約が既に存在する場合はスキップ
+                        else:
+                            conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
                         conn.commit()
+                
+                # active_guild_id を guild_id にリネーム（存在する場合）
+                if 'active_guild_id' in existing_columns:
+                    if 'guild_id' in existing_columns:
+                        # 両方存在する場合は active_guild_id を削除
+                        logger.info("カラムを削除: users.active_guild_id（guild_idが既に存在）")
+                        conn.execute(text("ALTER TABLE users DROP COLUMN active_guild_id"))
+                    else:
+                        # active_guild_id のみ存在する場合はリネーム
+                        logger.info("カラムをリネーム: users.active_guild_id -> guild_id")
+                        conn.execute(text("ALTER TABLE users RENAME COLUMN active_guild_id TO guild_id"))
+                    conn.commit()
+        
+        # guildsテーブルが存在する場合、不要なカラムを削除
+        if 'guilds' in inspector.get_table_names():
+            existing_columns = {col['name'] for col in inspector.get_columns('guilds')}
+            
+            # user_idカラムを削除（存在する場合）
+            if 'user_id' in existing_columns:
+                logger.info("カラムを削除: guilds.user_id（共有団モデルに変更）")
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE guilds DROP COLUMN user_id"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"カラム削除エラー: {e}")
+            
+            # is_activeカラムを削除（不要になった）
+            if 'is_active' in existing_columns:
+                logger.info("カラムを削除: guilds.is_active（ユーザー所属で判定）")
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE guilds DROP COLUMN is_active"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"カラム削除エラー: {e}")
+            
+            # guild_idにユニーク制約を追加（削除されていた場合）
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE guilds ADD CONSTRAINT guilds_guild_id_key UNIQUE (guild_id)"))
+                    conn.commit()
+                    logger.info("guilds.guild_idにユニーク制約を追加しました")
+            except Exception:
+                pass  # 制約が既に存在する場合はスキップ
         
         # テーブル作成（存在しない場合のみ）
         Base.metadata.create_all(bind=engine)
