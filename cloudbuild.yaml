@@ -24,7 +24,7 @@ steps:
           -e DATABASE_URL=postgresql://grablu:grablu2026@test-postgres:5432/grablu_test \
           -e PYTHONIOENCODING=utf-8 \
           python:3.11-slim bash -c "
-            pip install -q -r requirements-web.txt && \
+            pip install -q -r requirements.txt && \
             python -m pytest tests/ -v --tb=short
           "
         
