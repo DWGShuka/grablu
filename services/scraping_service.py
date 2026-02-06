@@ -10,10 +10,12 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from sqlalchemy.orm import Session
 
+from config import settings
 from models import Guild
 from guild_manager import GuildManager
 from member_tracker import MemberTracker
 from scraper import GuildScraper
+from exceptions import GuildNotFoundError, ScrapingError
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +38,6 @@ class ScrapingResult:
 class ScrapingService:
     """スクレイピング処理を管理するサービス"""
     
-    BASE_URL = "https://gbfdata.com/ja"
-    MAX_FETCH_PER_EXECUTION = 5  # 1回の実行で取得する最大イベント数
-    
     def __init__(self, db: Session, user_id: int):
         """
         Args:
@@ -50,6 +49,8 @@ class ScrapingService:
         self.guild_manager = GuildManager(db, user_id)
         self.tracker: Optional[MemberTracker] = None
         self.active_guild: Optional[Guild] = None
+        self.base_url = settings.gbfdata_base_url
+        self.max_fetch = settings.scraping_max_fetch
     
     def _setup_chrome_driver(self) -> webdriver.Chrome:
         """Chromeドライバーをセットアップ（ヘッドレスモード）"""
@@ -66,11 +67,11 @@ class ScrapingService:
             Guild: アクティブな団情報
             
         Raises:
-            ValueError: 団が登録されていない場合
+            GuildNotFoundError: 団が登録されていない場合
         """
         self.active_guild = self.guild_manager.get_active_guild()
         if not self.active_guild:
-            raise ValueError("団が登録されていません")
+            raise GuildNotFoundError()
         
         self.tracker = MemberTracker(self.db, self.active_guild.id)
         return self.active_guild
@@ -159,7 +160,7 @@ class ScrapingService:
             try:
                 # スクレイピング処理の初期化
                 scraper = GuildScraper(driver)
-                scraper.open_guild_page(guild_name=guild.name, base_url=self.BASE_URL)
+                scraper.open_guild_page(guild_name=guild.name, base_url=self.base_url)
                 
                 # 利用可能な全イベントを取得
                 available_events = scraper.get_all_available_events()
@@ -191,7 +192,7 @@ class ScrapingService:
                     )
                 
                 # 未登録イベントを順番に取得（最大5件まで）
-                max_fetch = min(self.MAX_FETCH_PER_EXECUTION, len(unregistered_events))
+                max_fetch = min(self.max_fetch, len(unregistered_events))
                 results = []
                 successfully_fetched = 0
                 
@@ -225,13 +226,8 @@ class ScrapingService:
             finally:
                 driver.quit()
                 
-        except ValueError as e:
-            # バリデーションエラー
-            logger.warning(f"バリデーションエラー: {e}")
-            return ScrapingResult(
-                status="error",
-                message=str(e)
-            )
+        except GuildNotFoundError:
+            raise
         except Exception as e:
             # その他のエラー
             logger.error(f"エラーが発生しました: {e}", exc_info=True)

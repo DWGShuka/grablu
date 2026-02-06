@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from services import MemberService
+from exceptions import GuildNotFoundError, EventDataNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ async def view_members_compare(
     
     try:
         result = service.get_member_compare_data()
-    except ValueError:
+    except GuildNotFoundError:
         # 団が登録されていない場合は団登録画面へリダイレクト
         return RedirectResponse(url="/guild/register", status_code=status.HTTP_302_FOUND)
     
@@ -84,7 +85,7 @@ async def view_members(
     
     try:
         result = service.get_member_list_data()
-    except ValueError:
+    except GuildNotFoundError:
         # 団が登録されていない場合は団登録画面へリダイレクト
         return RedirectResponse(url="/guild/register", status_code=status.HTTP_302_FOUND)
     
@@ -113,8 +114,6 @@ async def get_event_members(
     # MemberServiceを使用してデータ取得
     service = MemberService(db, user_id)
     
-    try:
-        event_data = service.get_event_members_data(event_number)
-        return event_data
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    # カスタム例外がGrabluExceptionとしてハンドルされるので、そのまま使用
+    event_data = service.get_event_members_data(event_number)
+    return event_data

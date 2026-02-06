@@ -1,17 +1,15 @@
 """データベース接続設定"""
-import os
 import logging
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-# 環境変数からDB接続情報を取得
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://grablu:grablu2026@db:5432/grablu"
-)
+# DATABASE_URLを設定から取得
+DATABASE_URL = settings.database_url
 
 # ログにはホスト情報のみ出力（パスワードを含めない）
 try:
@@ -125,6 +123,17 @@ def init_db():
                     logger.info("guilds.guild_idにユニーク制約を追加しました")
             except Exception:
                 pass  # 制約が既に存在する場合はスキップ
+        
+        # membersテーブルにis_current_memberカラムを追加
+        if 'members' in inspector.get_table_names():
+            existing_columns = {col['name'] for col in inspector.get_columns('members')}
+            
+            if 'is_current_member' not in existing_columns:
+                logger.info("カラムを追加: members.is_current_member")
+                with engine.connect() as conn:
+                    # デフォルトTrueで追加（既存メンバーは全て現在のメンバーとみなす）
+                    conn.execute(text("ALTER TABLE members ADD COLUMN is_current_member BOOLEAN DEFAULT TRUE"))
+                    conn.commit()
         
         # テーブル作成（存在しない場合のみ）
         Base.metadata.create_all(bind=engine)

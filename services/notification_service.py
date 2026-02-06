@@ -3,12 +3,13 @@
 メール送信などの通知機能に関するビジネスロジック
 """
 import logging
-import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
 from dataclasses import dataclass
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,19 +25,15 @@ class EmailConfig:
     sendgrid_api_key: Optional[str]
     
     @classmethod
-    def from_env(cls) -> "EmailConfig":
-        """環境変数から設定を読み込む"""
-        smtp_from = os.environ.get('SMTP_FROM_EMAIL')
-        sendgrid_from = os.environ.get('SENDGRID_FROM_EMAIL')
-        default_from = 'noreply@gbf-guild-mng.com'
-        
+    def from_settings(cls) -> "EmailConfig":
+        """設定からEmailConfigを生成"""
         return cls(
-            smtp_host=os.environ.get('SMTP_HOST'),
-            smtp_port=int(os.environ.get('SMTP_PORT', '587')),
-            smtp_user=os.environ.get('SMTP_USER'),
-            smtp_password=os.environ.get('SMTP_PASSWORD'),
-            from_email=smtp_from or sendgrid_from or default_from,
-            sendgrid_api_key=os.environ.get('SENDGRID_API_KEY')
+            smtp_host=settings.smtp_host,
+            smtp_port=settings.smtp_port,
+            smtp_user=settings.smtp_user,
+            smtp_password=settings.smtp_password,
+            from_email=settings.from_email,
+            sendgrid_api_key=settings.sendgrid_api_key
         )
 
 
@@ -46,9 +43,9 @@ class NotificationService:
     def __init__(self, config: Optional[EmailConfig] = None):
         """
         Args:
-            config: メール送信設定（Noneの場合は環境変数から読み込む）
+            config: メール送信設定（Noneの場合は設定から読み込む）
         """
-        self.config = config or EmailConfig.from_env()
+        self.config = config or EmailConfig.from_settings()
     
     def _create_html_email(
         self,

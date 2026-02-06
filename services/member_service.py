@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from models import Guild, NameHistory, Member
 from guild_manager import GuildManager
 from member_tracker import MemberTracker
+from exceptions import GuildNotFoundError, EventDataNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +53,11 @@ class MemberService:
             Guild: アクティブな団情報
             
         Raises:
-            ValueError: 団が登録されていない場合
+            GuildNotFoundError: 団が登録されていない場合
         """
         self.active_guild = self.guild_manager.get_active_guild()
         if not self.active_guild:
-            raise ValueError("団が登録されていません")
+            raise GuildNotFoundError()
         
         self.tracker = MemberTracker(self.db, self.active_guild.id)
         return self.active_guild
@@ -82,7 +83,7 @@ class MemberService:
             MemberListResult: 団員リストデータ
             
         Raises:
-            ValueError: 団が登録されていない場合
+            GuildNotFoundError: 団が登録されていない場合
         """
         guild = self._validate_and_setup()
         
@@ -107,7 +108,7 @@ class MemberService:
             MemberCompareResult: 比較分析データ
             
         Raises:
-            ValueError: 団が登録されていない場合
+            GuildNotFoundError: 団が登録されていない場合
         """
         guild = self._validate_and_setup()
         
@@ -129,14 +130,15 @@ class MemberService:
             イベントデータ
             
         Raises:
-            ValueError: 団が登録されていない、またはイベントデータが見つからない場合
+            GuildNotFoundError: 団が登録されていない場合
+            EventDataNotFoundError: イベントデータが見つからない場合
         """
         guild = self._validate_and_setup()
         
         event_data = self.tracker.get_event_data(event_number)
         
         if not event_data:
-            raise ValueError(f"イベント番号{event_number}のデータが見つかりません")
+            raise EventDataNotFoundError(event_number)
         
         return event_data
     

@@ -204,6 +204,22 @@ P(PかつQ) = P(青箱) × P(ヒヒ|青箱) = blue_chest_prob × hihi_prob
 ```
 grablu/
 ├── web_app.py              # メインアプリケーション（ホーム、履歴、エラーハンドラー）
+├── config/                 # 設定管理（Phase 3で追加）
+│   └── settings.py        # Pydantic Settings
+├── exceptions/             # カスタム例外（Phase 3で追加）
+│   ├── base.py            # 基底例外
+│   ├── auth.py            # 認証例外
+│   ├── guild.py           # 団例外
+│   ├── member.py          # 団員例外
+│   └── scraping.py        # スクレイピング例外
+├── schemas/                # 型定義（Phase 3で追加）
+│   ├── auth.py            # 認証スキーマ
+│   ├── guild.py           # 団スキーマ
+│   ├── member.py          # 団員スキーマ
+│   └── scraping.py        # スクレイピングスキーマ
+├── middleware/             # ミドルウェア（Phase 3で追加）
+│   ├── logging.py         # リクエストロギング
+│   └── error_handler.py   # エラーハンドラー
 ├── routers/                # エンドポイントルーター（機能別分割）
 │   ├── auth.py            # 認証（ログイン、登録、OAuth）
 │   ├── guilds.py          # 団管理（登録、検索、追加）
@@ -230,6 +246,7 @@ grablu/
 **リファクタリング履歴:**
 - 2026-02-06: Phase 1完了 - web_app.py（1033行）を6ファイルに分割
 - 2026-02-06: Phase 2完了 - サービス層導入、ビジネスロジック分離
+- 2026-02-07: Phase 3完了 - 設定管理、エラーハンドリング、型ヒント、ミドルウェア統合
 - 詳細: [ARCHITECTURE_REVIEW.md](ARCHITECTURE_REVIEW.md)
 
 ## ライセンス

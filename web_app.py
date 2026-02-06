@@ -1,9 +1,8 @@
 """
 Grablu Web Application
-FastAPIベースのWebアプリケーション（リファクタリング版）
+FastAPIベースのWebアプリケーション（Phase 3: 設定・ミドルウェア統合版）
 """
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -11,55 +10,77 @@ from fastapi import FastAPI, Request, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db, init_db
 from guild_manager import GuildManager
 from member_tracker import MemberTracker
 from models import NameHistory, Member
 from auth_utils import oauth
+from middleware import RequestLoggingMiddleware, add_exception_handlers
 
 # ルーターインポート
 from routers import auth, guilds, members, scraping, admin
 
-# ロギング設定（Cloud Runでは標準出力のみ使用）
+# ロギング設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+    level=getattr(logging, settings.log_level),
+    format=settings.log_format,
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
 # FastAPIアプリケーション
-app = FastAPI(title="Grablu 団員管理")
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.debug,
+    description="グラブル団員管理システム"
+)
 
-# セッションミドルウェアを追加
+# CORS設定
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# リクエストロギングミドルウェア
+app.add_middleware(RequestLoggingMiddleware)
+
+# セッションミドルウェア
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ.get("SECRET_KEY", "grablu-secret-key-change-in-production-2026"),
+    secret_key=settings.secret_key,
     session_cookie="session",
     max_age=86400,  # 24時間
     same_site="lax",
-    https_only=True  # HTTPS必須（本番環境）
+    https_only=not settings.debug  # デバッグモードではHTTPも許可
 )
+
+# 例外ハンドラー登録
+add_exception_handlers(app)
 
 # データベース初期化
 logger.info("=" * 60)
-logger.info("Grablu Web Application 起動中...")
+logger.info(f"{settings.app_name} 起動中...")
 logger.info("=" * 60)
 init_db()
 logger.info("=" * 60)
 logger.info("✓ アプリケーションの初期化が完了しました")
 logger.info("=" * 60)
 
+# 設定情報をログ出力（デバッグモード時のみ）
+if settings.debug:
+    from config.settings import log_settings
+    log_settings()
+
 # テンプレート設定
 templates = Jinja2Templates(directory="templates")
-
-# ベースURL（OAuth リダイレクト用）
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8080")
 
 
 def get_current_user(request: Request) -> Optional[str]:
