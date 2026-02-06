@@ -89,6 +89,7 @@ class TestGuildManager:
     def test_get_all_guilds(self, db_session):
         """全団取得をテスト"""
         # 複数のユーザーと団を作成
+        last_user = None
         for i in range(3):
             user = User(
                 username=f"user{i}",
@@ -102,9 +103,10 @@ class TestGuildManager:
             
             manager = GuildManager(db_session, user.id)
             manager.add_guild(f"test_00{i+5}", f"テスト団{chr(69+i)}")
+            last_user = user
         
         # どのユーザーからも全団が見える
-        manager = GuildManager(db_session, test_user.id)
+        manager = GuildManager(db_session, last_user.id)
         guilds = manager.get_all_guilds()
         
         assert len(guilds) >= 3

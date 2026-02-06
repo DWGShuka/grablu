@@ -6,10 +6,10 @@ from sqlalchemy.orm import sessionmaker
 from database import Base
 from models import User, Guild, Member
 
-# テスト用のデータベースURL
+# テスト用のデータベースURL（Windows環境でのエンコーディング問題を回避）
 TEST_DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://grablu:grablu2026@localhost:5432/grablu_test"
+    "postgresql://grablu:grablu2026@localhost:5432/grablu_test?client_encoding=utf8"
 )
 
 
