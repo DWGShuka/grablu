@@ -634,7 +634,8 @@ async def unauthorized_handler(request: Request, exc: HTTPException):
 async def test_email_page(request: Request, username: str = Depends(require_auth), db: Session = Depends(get_db)):
     """メールテスト画面（管理者のみ）"""
     # 管理者権限チェック
-    user = db.query(User).filter(User.username == username).first()
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_admin:
         raise HTTPException(status_code=403, detail="管理者権限が必要です")
     
@@ -819,7 +820,8 @@ async def test_email_send(
 ):
     """メールテスト送信API（管理者のみ）"""
     # 管理者権限チェック
-    user = db.query(User).filter(User.username == username).first()
+    user_id = request.session.get("user_id")
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_admin:
         raise HTTPException(status_code=403, detail="管理者権限が必要です")
     
