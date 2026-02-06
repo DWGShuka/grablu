@@ -58,7 +58,7 @@ class Guild(Base):
     
     # リレーション
     members = relationship("User", back_populates="guild")  # 団メンバー（最大30人）
-    guild_members = relationship("Member", back_populates="guild", cascade="all, delete-orphan")  # グラブルの団員データ
+    guild_members = relationship("Member", back_populates="guild")  # グラブルの団員データ（削除時はguild_id=NULL）
     event_data = relationship("EventData", back_populates="guild", cascade="all, delete-orphan")
 
 
@@ -69,7 +69,8 @@ class Member(Base):
     id = Column(Integer, primary_key=True, index=True)
     player_id = Column(String, unique=True, index=True, nullable=False)  # プレイヤーID
     current_name = Column(String, nullable=False)
-    guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=False)
+    guild_id = Column(Integer, ForeignKey("guilds.id", ondelete="SET NULL"), nullable=True)  # 所属団（NULL=未所属）
+    is_current_member = Column(Boolean, default=True)  # 現在のメンバーかどうか（最新30人）
     first_seen = Column(DateTime, default=datetime.now)
     last_seen = Column(DateTime, default=datetime.now)
     
@@ -118,7 +119,7 @@ class MemberRanking(Base):
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("event_data.id"), nullable=False)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
-    rank = Column(String, nullable=False)  # 順位（文字列形式: "1位", "2位"など）
+    rank = Column(Integer, nullable=False)  # 順位（数値）
     
     # リレーション
     event = relationship("EventData", back_populates="rankings")

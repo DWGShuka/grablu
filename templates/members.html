@@ -246,6 +246,7 @@
         {% endif %}
         
         <a href="/" class="btn">← ホームに戻る</a>
+        <a href="/members/compare" class="btn" style="background: #28a745; color: white; margin-left: 10px;">📊 比較分析画面へ</a>
     </div>
     
     <script>
@@ -268,10 +269,10 @@
                 const tbody = document.getElementById('membersTableBody');
                 tbody.innerHTML = '';
                 
-                // 順位順にソート
+                // 順位順にソート（rank は既に数値型）
                 const sortedMembers = [...data.members].sort((a, b) => {
-                    const rankA = parseInt(a.rank.replace(/,/g, '')) || 999999;
-                    const rankB = parseInt(b.rank.replace(/,/g, '')) || 999999;
+                    const rankA = a.rank || 999999;
+                    const rankB = b.rank || 999999;
                     return rankA - rankB;
                 });
                 
@@ -282,7 +283,7 @@
                         <td style="text-align: center;">${index + 1}</td>
                         <td>${member.player_id}</td>
                         <td><strong>${member.name}</strong></td>
-                        <td class="${rankClass}">${member.rank}</td>
+                        <td class="${rankClass}">${member.rank.toLocaleString()}位</td>
                     `;
                     tbody.appendChild(row);
                 });

@@ -10,24 +10,26 @@ from itsdangerous import URLSafeTimedSerializer
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 
+from config import settings
+
 # メール認証用のシークレットキー
-SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-change-in-production")
-serializer = URLSafeTimedSerializer(SECRET_KEY)
+serializer = URLSafeTimedSerializer(settings.secret_key)
 
 # OAuth設定
 config = Config(environ=os.environ)
 oauth = OAuth(config)
 
-# Google OAuth設定
-oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+# Google OAuth設定（設定されている場合のみ）
+if settings.is_oauth_configured:
+    oauth.register(
+        name='google',
+        client_id=settings.google_client_id,
+        client_secret=settings.google_client_secret,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
 
 def generate_verification_token(email: str) -> str:
