@@ -139,6 +139,9 @@ async def search_guild(
                 logger.info("Chromeドライバー終了")
             except Exception as e:
                 logger.error(f"ドライバー終了エラー: {e}")
+
+
+@router.post("/add")
 async def add_guild(
     request: Request,
     guild_id: str = Form(...),
