@@ -41,12 +41,32 @@ def init_db():
     """データベースを初期化"""
     logger.info("データベース初期化を開始します...")
     try:
+        # 既存テーブルのスキーマを確認して必要なカラムを追加
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        
+        # usersテーブルが存在する場合、必要なカラムを追加
+        if 'users' in inspector.get_table_names():
+            existing_columns = {col['name'] for col in inspector.get_columns('users')}
+            required_columns = {
+                'email_verified': 'BOOLEAN DEFAULT FALSE',
+                'verification_token': 'VARCHAR',
+                'oauth_provider': 'VARCHAR',
+                'oauth_id': 'VARCHAR UNIQUE'
+            }
+            
+            with engine.connect() as conn:
+                for col_name, col_def in required_columns.items():
+                    if col_name not in existing_columns:
+                        logger.info(f"カラムを追加: users.{col_name}")
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+        
+        # テーブル作成（存在しない場合のみ）
         Base.metadata.create_all(bind=engine)
         logger.info("✓ データベーステーブルの作成が完了しました")
         
         # 作成されたテーブル一覧を表示
-        from sqlalchemy import inspect
-        inspector = inspect(engine)
         tables = inspector.get_table_names()
         logger.info(f"✓ 作成されたテーブル: {', '.join(tables)}")
     except Exception as e:
