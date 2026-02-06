@@ -1,45 +1,38 @@
 steps:
-  # PostgreSQLコンテナを起動してテストを実行
+  # テストをDockerコンテナ内で実行
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        docker network create test-network
+        # ネットワークを作成
+        docker network create test-network || true
+        
+        # PostgreSQLコンテナを起動
         docker run -d --name test-postgres --network test-network \
           -e POSTGRES_DB=grablu_test \
           -e POSTGRES_USER=grablu \
           -e POSTGRES_PASSWORD=grablu2026 \
           postgres:16-alpine
-        sleep 5
-    id: 'start-test-db'
-  
-  # テストを実行  
-  - name: 'python:3.11-slim'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        pip install -q -r requirements.txt
-        export DATABASE_URL=postgresql://grablu:grablu2026@test-postgres:5432/grablu_test
-        python -m pytest tests/ -v --tb=short
-    env:
-      - 'PYTHONIOENCODING=utf-8'
-    network: 'test-network'
-    id: 'run-tests'
-    waitFor: ['start-test-db']
-  
-  # テスト用コンテナをクリーンアップ
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
+        
+        # PostgreSQLが起動するまで待機
+        sleep 10
+        
+        # テストコンテナを実行
+        docker run --rm --network test-network \
+          -v $(pwd):/app -w /app \
+          -e DATABASE_URL=postgresql://grablu:grablu2026@test-postgres:5432/grablu_test \
+          -e PYTHONIOENCODING=utf-8 \
+          python:3.11-slim bash -c "
+            pip install -q -r requirements.txt && \
+            python -m pytest tests/ -v --tb=short
+          "
+        
+        # クリーンアップ
         docker stop test-postgres || true
         docker rm test-postgres || true
         docker network rm test-network || true
-    id: 'cleanup-test-db'
-    waitFor: ['run-tests']
+    id: 'run-tests'
   
   # Dockerイメージをビルド
   - name: 'gcr.io/cloud-builders/docker'
