@@ -81,6 +81,8 @@ class TestGuildManager:
         # 団を登録
         manager.add_guild("test_004", "テスト団D")
         
+        # マネージャーを再作成してユーザーを再取得
+        manager = GuildManager(db_session, test_user.id)
         active_guild = manager.get_active_guild()
         assert active_guild is not None
         assert active_guild.guild_id == "test_004"
@@ -134,6 +136,7 @@ class TestGuildManager:
         assert result1 is True
         
         # 2回目の登録（同じユーザー、別のguild_id）- 既に所属しているので失敗
+        manager = GuildManager(db_session, test_user.id)  # マネージャーを再作成
         result2 = manager.add_guild("duplicate_002", "別の団")
         assert result2 is False
         
