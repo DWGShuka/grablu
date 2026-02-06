@@ -8,6 +8,10 @@ __pycache__/
 # VS Code設定（開発者によるが）
 .vscode/
 
+# バックアップファイル
+*.bak
+*.backup
+
 # 機密ファイル
 credentials.json
 config.yaml
@@ -15,6 +19,7 @@ config.yaml
 # データベースファイル
 *.db
 *.db-journal
+grablu.db/
 
 # 旧JSONファイル（参考用に残す場合はコメントアウト）
 members.json
@@ -22,22 +27,27 @@ guilds.json
 
 # ログファイル
 *.log
+*.log/
+web_app.log/
+drop.log
+member.log
+grablu.log
 
 # メンバー管理ファイル（個人情報）
-members.json
 test_members.json
-guilds.json
-
-# Webアプリケーションログ
-web_app.log
 
 # 環境変数
 .env
 
 # 生成ファイル
 graphs/
-# �e�X�g�J�o���b�W
+
+# テストカバレッジ
 .coverage
 coverage.xml
 htmlcov/
 .pytest_cache/
+
+# OSキャッシュ
+.DS_Store
+Thumbs.db
