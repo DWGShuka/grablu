@@ -49,11 +49,11 @@ app = FastAPI(title="Grablu 団員管理")
 # セッションミドルウェアを追加
 app.add_middleware(
     SessionMiddleware,
-    secret_key="grablu-secret-key-change-in-production-2026",  # 本番では環境変数から
+    secret_key=os.environ.get("SECRET_KEY", "grablu-secret-key-change-in-production-2026"),
     session_cookie="session",
     max_age=86400,  # 24時間
     same_site="lax",
-    https_only=False  # ローカル開発環境用
+    https_only=True  # HTTPS必須（本番環境）
 )
 
 # データベース初期化
