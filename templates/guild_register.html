@@ -430,8 +430,23 @@
                     body: formData
                 });
                 
-                const result = await response.json();
                 loader.style.display = 'none';
+                
+                // HTTPエラーチェック
+                if (!response.ok) {
+                    let errorMessage = `サーバーエラー (${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorMessage;
+                    } catch (e) {
+                        // JSONパースに失敗した場合（HTMLが返ってきた場合）
+                        errorMessage = '団検索サービスが一時的に利用できません';
+                    }
+                    showAlert(errorMessage, '❌');
+                    return;
+                }
+                
+                const result = await response.json();
                 
                 if (result.status === 'success' && result.results.length > 0) {
                     resultsDiv.innerHTML = '<h3 style="margin-top: 20px; color: #333;">検索結果</h3>';
@@ -455,7 +470,8 @@
                 }
             } catch (error) {
                 loader.style.display = 'none';
-                showAlert('エラーが発生しました: ' + error.message, '❌');
+                console.error('団検索エラー:', error);
+                showAlert('ネットワークエラーが発生しました。しばらくしてから再度お試しください。', '❌');
             }
         }
         
