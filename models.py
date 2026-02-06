@@ -70,6 +70,7 @@ class Member(Base):
     player_id = Column(String, unique=True, index=True, nullable=False)  # プレイヤーID
     current_name = Column(String, nullable=False)
     guild_id = Column(Integer, ForeignKey("guilds.id"), nullable=False)
+    is_current_member = Column(Boolean, default=True)  # 現在のメンバーかどうか（最新30人）
     first_seen = Column(DateTime, default=datetime.now)
     last_seen = Column(DateTime, default=datetime.now)
     

@@ -32,6 +32,55 @@ class GuildScraper:
             logger.error(f"ドロップダウン取得エラー: {e}")
             raise
     
+    def get_all_available_events(self):
+        """ドロップダウンから利用可能な全イベント番号を取得"""
+        try:
+            select = Select(self.driver.find_element(By.ID, "day-select"))
+            options = select.options
+            
+            event_numbers = []
+            for option in options:
+                text = option.text.strip()
+                match = re.search(r'(\d+)回', text)
+                if match:
+                    event_num = int(match.group(1))
+                    event_numbers.append(event_num)
+            
+            logger.info(f"利用可能なイベント: {len(event_numbers)}回分 ({min(event_numbers)}回〜{max(event_numbers)}回)")
+            return sorted(event_numbers)
+        except Exception as e:
+            logger.error(f"イベント一覧取得エラー: {e}")
+            raise
+    
+    def select_event(self, event_number: int):
+        """ドロップダウンから特定のイベントを選択"""
+        try:
+            select = Select(self.driver.find_element(By.ID, "day-select"))
+            options = select.options
+            
+            for option in options:
+                text = option.text.strip()
+                match = re.search(r'(\d+)回', text)
+                if match and int(match.group(1)) == event_number:
+                    select.select_by_visible_text(text)
+                    logger.info(f"第{event_number}回を選択しました")
+                    # ページが更新されるまで待機
+                    import time
+                    time.sleep(1)
+                    
+                    # 実際に選択されたか確認
+                    selected = self.get_event_number_from_dropdown()
+                    if selected != event_number:
+                        logger.warning(f"選択が反映されませんでした: 期待{event_number}回, 実際{selected}回")
+                        return False
+                    return True
+            
+            logger.warning(f"第{event_number}回が見つかりません")
+            return False
+        except Exception as e:
+            logger.error(f"イベント選択エラー: {e}")
+            raise
+    
     def open_guild_page(self, guild_name, base_url):
         """総合ページからギルド名で検索し、団員一覧を開く"""
         try:

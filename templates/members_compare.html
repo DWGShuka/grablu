@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>団員比較 - Grablu 団員管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f0f0f0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #555;
+        }
+        
+        .guild-info {
+            background: #e8f5e9;
+            border-left: 4px solid #28a745;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        .control-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .event-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .event-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .event-checkbox:hover {
+            border-color: #667eea;
+        }
+        
+        .event-checkbox input[type="checkbox"] {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        
+        .event-checkbox.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .filter-group input,
+        .filter-group select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        th:hover {
+            background: #5568d3;
+        }
+        
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.3;
+        }
+        
+        th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        
+        th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .rank-cell {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .rank-up {
+            color: #28a745;
+        }
+        
+        .rank-down {
+            color: #dc3545;
+        }
+        
+        .rank-same {
+            color: #6c757d;
+        }
+        
+        .trend-arrow {
+            font-size: 1.2em;
+            margin-left: 5px;
+        }
+        
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .highlight {
+            background: #fff3cd !important;
+        }
+        
+        .column-toggle {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .column-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 団員比較分析</h1>
+        <p class="subtitle">複数イベントのデータを比較して分析できます</p>
+        
+        <div class="user-info">
+            ログイン中: <strong>{{ username }}</strong>
+            <a href="/logout" style="margin-left: 20px; color: #667eea; text-decoration: none;">ログアウト</a>
+        </div>
+        
+        {% if guild %}
+        <div class="guild-info">
+            <strong>🏰 {{ guild.guild_name }}</strong>
+        </div>
+        {% endif %}
+        
+        {% if events %}
+        <div class="control-panel">
+            <div class="section-title">🎯 イベント選択（最大5つまで）</div>
+            <div class="event-selection" id="eventSelection">
+                {% for event in events %}
+                <label class="event-checkbox">
+                    <input type="checkbox" name="event" value="{{ event.event_number }}" onchange="toggleEventSelection(this)">
+                    <span>第{{ event.event_number }}回 ({{ event.fetched_at[:10] }})</span>
+                </label>
+                {% endfor %}
+            </div>
+            
+            <div class="section-title">🔍 フィルター・表示設定</div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>名前検索</label>
+                    <input type="text" id="nameFilter" placeholder="団員名で検索">
+                </div>
+                <div class="filter-group">
+                    <label>プレイヤーID検索</label>
+                    <input type="text" id="idFilter" placeholder="プレイヤーID">
+                </div>
+                <div class="filter-group">
+                    <label>順位範囲（最小）</label>
+                    <input type="number" id="rankMin" placeholder="例: 1">
+                </div>
+                <div class="filter-group">
+                    <label>順位範囲（最大）</label>
+                    <input type="number" id="rankMax" placeholder="例: 50000">
+                </div>
+            </div>
+            
+            <div class="section-title">📋 表示列の切り替え</div>
+            <div class="column-toggle" id="columnToggle">
+                <label><input type="checkbox" checked onchange="toggleColumn('player_id')" id="col_player_id"> プレイヤーID</label>
+                <label><input type="checkbox" checked onchange="toggleColumn('name')" id="col_name"> 名前</label>
+                <label><input type="checkbox" checked onchange="toggleColumn('rank')" id="col_rank"> 順位</label>
+                <label><input type="checkbox" checked onchange="toggleColumn('trend')" id="col_trend"> 変動</label>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="loadComparisonData()">📊 比較実行</button>
+                <button class="btn btn-secondary" onclick="applyFilters()">🔍 フィルター適用</button>
+                <button class="btn btn-secondary" onclick="resetFilters()">🔄 リセット</button>
+                <button class="btn btn-secondary" onclick="exportToCSV()">💾 CSV出力</button>
+            </div>
+        </div>
+        
+        <div class="stats-summary" id="statsSummary" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">選択イベント数</div>
+                <div class="stat-value" id="selectedEventCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">総団員数</div>
+                <div class="stat-value" id="totalMembers">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">平均順位変動</div>
+                <div class="stat-value" id="avgRankChange" style="font-size: 1.2em;">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">最大上昇</div>
+                <div class="stat-value" id="maxRankUp" style="font-size: 1.2em;">-</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="comparisonTable">
+                <thead id="tableHead">
+                    <tr>
+                        <th class="sortable" onclick="sortTable('index')">No.</th>
+                        <th class="sortable col-player_id" onclick="sortTable('player_id')">プレイヤーID</th>
+                        <th class="sortable col-name" onclick="sortTable('name')">名前</th>
+                        <th class="col-rank">順位データ</th>
+                        <th class="col-trend">変動</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #999;">
+                            イベントを選択して「比較実行」ボタンをクリックしてください
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <h2>📊 データがありません</h2>
+            <p style="margin-top: 10px;">まずはホームから団員データを取得してください</p>
+        </div>
+        {% endif %}
+        
+        <div class="btn-group">
+            <a href="/" class="btn btn-secondary">← ホームに戻る</a>
+            <a href="/members" class="btn btn-secondary">シンプル表示</a>
+        </div>
+    </div>
+    
+    <script>
+        let comparisonData = [];
+        let filteredData = [];
+        let selectedEvents = [];
+        let sortColumn = 'index';
+        let sortDirection = 'asc';
+        
+        function toggleEventSelection(checkbox) {
+            const label = checkbox.parentElement;
+            if (checkbox.checked) {
+                if (selectedEvents.length >= 5) {
+                    alert('最大5つまで選択できます');
+                    checkbox.checked = false;
+                    return;
+                }
+                label.classList.add('selected');
+                selectedEvents.push(parseInt(checkbox.value));
+            } else {
+                label.classList.remove('selected');
+                selectedEvents = selectedEvents.filter(e => e !== parseInt(checkbox.value));
+            }
+        }
+        
+        async function loadComparisonData() {
+            if (selectedEvents.length === 0) {
+                alert('比較するイベントを選択してください');
+                return;
+            }
+            
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">読み込み中...</td></tr>';
+            
+            try {
+                // 複数イベントのデータを取得
+                const eventDataPromises = selectedEvents.map(eventNum =>
+                    fetch(`/members/event/${eventNum}`).then(r => r.json())
+                );
+                const eventsData = await Promise.all(eventDataPromises);
+                
+                // データを統合
+                const memberMap = new Map();
+                
+                eventsData.forEach((eventData, eventIndex) => {
+                    eventData.members.forEach(member => {
+                        if (!memberMap.has(member.player_id)) {
+                            memberMap.set(member.player_id, {
+                                player_id: member.player_id,
+                                name: member.name,
+                                ranks: new Array(selectedEvents.length).fill(null)
+                            });
+                        }
+                        memberMap.get(member.player_id).ranks[eventIndex] = member.rank;
+                    });
+                });
+                
+                comparisonData = Array.from(memberMap.values());
+                filteredData = [...comparisonData];
+                
+                // 統計情報を更新
+                updateStatistics();
+                
+                // テーブルヘッダーを更新
+                updateTableHeader();
+                
+                // テーブルを描画
+                renderTable();
+                
+                // 統計カードを表示
+                document.getElementById('statsSummary').style.display = 'grid';
+                
+            } catch (error) {
+                console.error('データ取得エラー:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: red; padding: 40px;">
+                            データの取得に失敗しました
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function updateTableHeader() {
+            const thead = document.getElementById('tableHead');
+            let headerHTML = '<tr>';
+            headerHTML += '<th class="sortable" onclick="sortTable(\'index\')">No.</th>';
+            
+            if (isColumnVisible('player_id')) {
+                headerHTML += '<th class="sortable col-player_id" onclick="sortTable(\'player_id\')">プレイヤーID</th>';
+            }
+            if (isColumnVisible('name')) {
+                headerHTML += '<th class="sortable col-name" onclick="sortTable(\'name\')">名前</th>';
+            }
+            
+            if (isColumnVisible('rank')) {
+                selectedEvents.forEach((eventNum, index) => {
+                    headerHTML += `<th class="col-rank sortable" onclick="sortTable('rank_${index}')">第${eventNum}回</th>`;
+                });
+            }
+            
+            if (isColumnVisible('trend') && selectedEvents.length >= 2) {
+                headerHTML += '<th class="col-trend">変動傾向</th>';
+            }
+            
+            headerHTML += '</tr>';
+            thead.innerHTML = headerHTML;
+        }
+        
+        function renderTable() {
+            const tbody = document.getElementById('comparisonTableBody');
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align: center; padding: 40px; color: #999;">条件に一致するデータがありません</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            filteredData.forEach((member, index) => {
+                const row = document.createElement('tr');
+                let cellsHTML = `<td>${index + 1}</td>`;
+                
+                if (isColumnVisible('player_id')) {
+                    cellsHTML += `<td>${member.player_id}</td>`;
+                }
+                if (isColumnVisible('name')) {
+                    cellsHTML += `<td><strong>${member.name}</strong></td>`;
+                }
+                
+                if (isColumnVisible('rank')) {
+                    member.ranks.forEach(rank => {
+                        if (rank) {
+                            cellsHTML += `<td class="rank-cell">${rank}</td>`;
+                        } else {
+                            cellsHTML += `<td style="color: #ccc;">-</td>`;
+                        }
+                    });
+                }
+                
+                if (isColumnVisible('trend') && selectedEvents.length >= 2) {
+                    const trend = calculateTrend(member.ranks);
+                    cellsHTML += `<td>${trend}</td>`;
+                }
+                
+                row.innerHTML = cellsHTML;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function calculateTrend(ranks) {
+            const validRanks = ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+            
+            if (validRanks.length < 2) return '-';
+            
+            const firstRank = validRanks[0];
+            const lastRank = validRanks[validRanks.length - 1];
+            const diff = firstRank - lastRank; // 順位が下がる（数字が大きくなる）= 下降
+            
+            if (diff > 0) {
+                return `<span class="rank-up">↑ ${diff.toLocaleString()}<span class="trend-arrow">📈</span></span>`;
+            } else if (diff < 0) {
+                return `<span class="rank-down">↓ ${Math.abs(diff).toLocaleString()}<span class="trend-arrow">📉</span></span>`;
+            } else {
+                return `<span class="rank-same">→ 変動なし</span>`;
+            }
+        }
+        
+        function updateStatistics() {
+            document.getElementById('selectedEventCount').textContent = selectedEvents.length;
+            document.getElementById('totalMembers').textContent = `${comparisonData.length}人`;
+            
+            // 平均順位変動を計算
+            let totalChange = 0;
+            let maxUp = 0;
+            let countWithChange = 0;
+            
+            comparisonData.forEach(member => {
+                const validRanks = member.ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+                if (validRanks.length >= 2) {
+                    const change = validRanks[0] - validRanks[validRanks.length - 1];
+                    totalChange += Math.abs(change);
+                    if (change > maxUp) maxUp = change;
+                    countWithChange++;
+                }
+            });
+            
+            const avgChange = countWithChange > 0 ? Math.round(totalChange / countWithChange) : 0;
+            document.getElementById('avgRankChange').textContent = avgChange.toLocaleString();
+            document.getElementById('maxRankUp').textContent = maxUp > 0 ? `↑${maxUp.toLocaleString()}` : '-';
+        }
+        
+        function applyFilters() {
+            const nameFilter = document.getElementById('nameFilter').value.toLowerCase();
+            const idFilter = document.getElementById('idFilter').value;
+            const rankMin = parseInt(document.getElementById('rankMin').value) || 0;
+            const rankMax = parseInt(document.getElementById('rankMax').value) || Infinity;
+            
+            filteredData = comparisonData.filter(member => {
+                // 名前フィルター
+                if (nameFilter && !member.name.toLowerCase().includes(nameFilter)) {
+                    return false;
+                }
+                
+                // IDフィルター
+                if (idFilter && !member.player_id.includes(idFilter)) {
+                    return false;
+                }
+                
+                // 順位フィルター（最新の順位で判定）
+                const latestRank = member.ranks.find(r => r !== null);
+                if (latestRank) {
+                    const rank = parseInt(latestRank.replace(/,/g, ''));
+                    if (rank < rankMin || rank > rankMax) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            renderTable();
+        }
+        
+        function resetFilters() {
+            document.getElementById('nameFilter').value = '';
+            document.getElementById('idFilter').value = '';
+            document.getElementById('rankMin').value = '';
+            document.getElementById('rankMax').value = '';
+            filteredData = [...comparisonData];
+            renderTable();
+        }
+        
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let valA, valB;
+                
+                if (column === 'index') {
+                    return 0; // 元の順序を維持
+                } else if (column === 'player_id') {
+                    valA = a.player_id;
+                    valB = b.player_id;
+                } else if (column === 'name') {
+                    valA = a.name;
+                    valB = b.name;
+                } else if (column.startsWith('rank_')) {
+                    const rankIndex = parseInt(column.split('_')[1]);
+                    valA = a.ranks[rankIndex] ? parseInt(a.ranks[rankIndex].replace(/,/g, '')) : Infinity;
+                    valB = b.ranks[rankIndex] ? parseInt(b.ranks[rankIndex].replace(/,/g, '')) : Infinity;
+                }
+                
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderTable();
+            updateSortIndicators();
+        }
+        
+        function updateSortIndicators() {
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            const activeHeader = document.querySelector(`th[onclick*="${sortColumn}"]`);
+            if (activeHeader) {
+                activeHeader.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        }
+        
+        function toggleColumn(columnName) {
+            updateTableHeader();
+            renderTable();
+        }
+        
+        function isColumnVisible(columnName) {
+            const checkbox = document.getElementById(`col_${columnName}`);
+            return checkbox ? checkbox.checked : true;
+        }
+        
+        function exportToCSV() {
+            if (filteredData.length === 0) {
+                alert('エクスポートするデータがありません');
+                return;
+            }
+            
+            let csv = '\uFEFF'; // BOM for Excel
+            
+            // ヘッダー行
+            let headers = ['No.', 'プレイヤーID', '名前'];
+            selectedEvents.forEach(eventNum => {
+                headers.push(`第${eventNum}回`);
+            });
+            if (selectedEvents.length >= 2) {
+                headers.push('変動');
+            }
+            csv += headers.join(',') + '\n';
+            
+            // データ行
+            filteredData.forEach((member, index) => {
+                let row = [
+                    index + 1,
+                    member.player_id,
+                    `"${member.name}"`,
+                    ...member.ranks.map(r => r || '-')
+                ];
+                
+                if (selectedEvents.length >= 2) {
+                    const validRanks = member.ranks.map(r => r ? parseInt(r.replace(/,/g, '')) : null).filter(r => r !== null);
+                    if (validRanks.length >= 2) {
+                        const diff = validRanks[0] - validRanks[validRanks.length - 1];
+                        row.push(diff);
+                    } else {
+                        row.push('-');
+                    }
+                }
+                
+                csv += row.join(',') + '\n';
+            });
+            
+            // ダウンロード
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `団員比較_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>

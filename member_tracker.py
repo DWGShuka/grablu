@@ -23,7 +23,7 @@ class MemberTracker:
     
     def update_members(self, scraped_data: List[Dict]) -> Dict:
         """
-        スクレイピングデータで履歴を更新
+        スクレイピングデータで履歴を更新（最新30人のみを現在のメンバーとする）
         
         Args:
             scraped_data: [{"name": "...", "player_id": "...", "rank": "..."}, ...]
@@ -34,6 +34,9 @@ class MemberTracker:
         name_changes = {}
         today = datetime.now()
         
+        # 現在のメンバーのplayer_idセット
+        current_player_ids = set()
+        
         for member_data in scraped_data:
             player_id = member_data["player_id"]
             current_name = member_data["name"]
@@ -41,6 +44,8 @@ class MemberTracker:
             if not player_id:
                 logger.warning(f"IDが取得できませんでした: {current_name}")
                 continue
+            
+            current_player_ids.add(player_id)
             
             # 既存団員を検索
             member = self.db.query(Member).filter(
@@ -72,6 +77,8 @@ class MemberTracker:
                 
                 # 最終確認日を更新
                 member.last_seen = today
+                member.is_current_member = True
+                member.guild_id = self.guild_id  # 復帰した場合に備えて団IDを更新
             else:
                 # 新規団員
                 logger.info(f"新規団員を登録: {current_name} (ID: {player_id})")
@@ -79,10 +86,22 @@ class MemberTracker:
                     player_id=player_id,
                     current_name=current_name,
                     guild_id=self.guild_id,
+                    is_current_member=True,
                     first_seen=today,
                     last_seen=today
                 )
                 self.db.add(member)
+        
+        # 現在の30人に含まれないメンバーを非アクティブにする
+        former_members = self.db.query(Member).filter(
+            Member.guild_id == self.guild_id,
+            Member.is_current_member == True,
+            ~Member.player_id.in_(current_player_ids)
+        ).all()
+        
+        for former_member in former_members:
+            logger.info(f"メンバーが脱退しました: {former_member.current_name} (ID: {former_member.player_id})")
+            former_member.is_current_member = False
         
         self.db.commit()
         return name_changes
@@ -98,6 +117,13 @@ class MemberTracker:
         return self.db.query(Member).filter(
             Member.current_name == name
         ).first()
+    
+    def get_registered_event_numbers(self) -> List[int]:
+        """既に登録されているイベント番号のリストを取得"""
+        events = self.db.query(EventData.event_number).filter(
+            EventData.guild_id == self.guild_id
+        ).distinct().all()
+        return sorted([event[0] for event in events])
     
     def is_already_fetched(self, event_number: int) -> bool:
         """指定されたイベント番号のデータが既に取得済みか確認"""
@@ -226,7 +252,8 @@ class MemberTracker:
         return history
     
     def get_all_members(self) -> List[Member]:
-        """全団員を取得"""
+        """全団員を取得（現在の30人のみ）"""
         return self.db.query(Member).filter(
-            Member.guild_id == self.guild_id
+            Member.guild_id == self.guild_id,
+            Member.is_current_member == True
         ).all()

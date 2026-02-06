@@ -88,13 +88,17 @@
         }
         
         .button-group {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-top: 30px;
         }
         
+        .button-group > * {
+            width: 100%;
+        }
+        
         button, .btn {
-            flex: 1;
             padding: 15px 30px;
             font-size: 16px;
             font-weight: bold;
@@ -227,6 +231,9 @@
             <a href="/members" class="btn btn-secondary">
                 👥 団員リスト
             </a>
+            <a href="/members/compare" class="btn btn-secondary">
+                📊 比較分析
+            </a>
             <a href="/history" class="btn btn-secondary">
                 📋 履歴を見る
             </a>
@@ -262,17 +269,37 @@
                 
                 if (result.status === 'success') {
                     statusMsg.className = 'status-message status-success';
-                    statusMsg.innerHTML = `
-                        ✅ ${result.message}<br>
-                        取得人数: ${result.member_count}人<br>
-                        名前変更: ${result.name_changes}件
-                    `;
+                    
+                    let message = `✅ ${result.message}<br><br>`;
+                    
+                    if (result.fetched_events) {
+                        message += '<strong>取得したイベント:</strong><br>';
+                        result.fetched_events.forEach(event => {
+                            message += `📅 第${event.event_number}回: ${event.member_count}人 (名前変更: ${event.name_changes}件)<br>`;
+                        });
+                        
+                        if (result.remaining_events > 0) {
+                            message += `<br><span style="color: #856404;">残り未登録: ${result.remaining_events}回分</span>`;
+                        }
+                    }
+                    
+                    statusMsg.innerHTML = message;
                     
                     // 3秒後にリロード
                     setTimeout(() => location.reload(), 3000);
+                } else if (result.status === 'info') {
+                    statusMsg.className = 'status-message status-warning';
+                    statusMsg.innerHTML = `ℹ️ ${result.message}<br>利用可能: ${result.available_events}回分 / 登録済: ${result.registered_events}回分`;
+                    btn.disabled = false;
+                    btn.textContent = '▶️ データ取得開始';
                 } else if (result.status === 'warning') {
                     statusMsg.className = 'status-message status-warning';
                     statusMsg.textContent = `⚠️ ${result.message}`;
+                    btn.disabled = false;
+                    btn.textContent = '▶️ データ取得開始';
+                } else if (result.status === 'error') {
+                    statusMsg.className = 'status-message status-error';
+                    statusMsg.textContent = `❌ ${result.message}`;
                     btn.disabled = false;
                     btn.textContent = '▶️ データ取得開始';
                 } else {
